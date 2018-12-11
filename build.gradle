@@ -1,0 +1,91 @@
+plugins {
+    id 'java'
+    id 'idea'
+    id 'maven-publish'
+    id "com.jfrog.bintray" version "1.8.0"
+}
+
+ext {
+    ver = '1.0.0'
+    pkg = 'plasma.blackhole'
+}
+
+group pkg
+version ver
+
+sourceCompatibility = 1.8
+
+repositories {
+    jcenter()
+}
+
+dependencies {
+    compile 'com.squareup:javapoet:1.11.1'
+    compile 'de.ruedigermoeller:fst:2.57'
+    compile 'com.google.code.findbugs:jsr305:3.0.2'
+    compile 'com.austinv11.graphs:SimpleGraph:1.0.0'
+    compileOnly 'com.austinv11.servicer:Servicer:1.0.0'
+    annotationProcessor 'com.austinv11.servicer:Servicer:1.0.0'
+
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+}
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+javadoc {
+    failOnError false
+}
+
+artifacts {
+    archives sourcesJar
+    archives javadocJar
+}
+
+bintray {
+    user = System.getenv('BINTRAY_USER')
+    key = System.getenv('BINTRAY_KEY')
+    publications = ['MyPublication']
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            pom {
+                name = 'Blackhole'
+                description = 'Exploiting annotation processing for DI, validation and more!'
+                url = 'https://github.com/PlasmaSoftware/Blackhole'
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'austinv11'
+                        name = 'Austin Varela'
+                        email = 'austinv11@gmail.com'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:git://github.com/PlasmaSoftware/Blackhole.git'
+                    url = 'https://github.com/PlasmaSoftware/Blackhole'
+                }
+            }
+            from components.java
+            artifact sourcesJar
+            artifact javadocJar
+            groupId pkg
+            artifactId 'Blackhole'
+            version ver
+        }
+    }
+}
