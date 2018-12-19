@@ -1,8 +1,11 @@
 package plasma.blackhole.processor;
 
 import com.austinv11.servicer.WireService;
-import plasma.blackhole.annotations.ClassDecorator;
-import plasma.blackhole.annotations.MethodDecorator;
+import plasma.blackhole.api.ClassDecoratorDriver;
+import plasma.blackhole.api.MethodDecoratorDriver;
+import plasma.blackhole.api.annotations.ClassDecorator;
+import plasma.blackhole.api.annotations.MethodDecorator;
+import plasma.blackhole.util.ClassUtils;
 
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
@@ -37,10 +40,32 @@ public class DecoratorAnnotationProcessor extends AbstractBlackholeAnnotationPro
     }
 
     private boolean handleClassDecorators(JavaFileBatch batch, Set<? extends Element> elements) {
+        elements.forEach(element -> {
+            try {
+                ClassDecorator decorator = element.getAnnotation(ClassDecorator.class);
+                ClassDecoratorDriver driver = ClassUtils.instantiate(decorator.driver());
+                info("Identified Class Decorator", driver);
 
+
+            } catch (Exception e) {
+                error("Exception caught handling class decorators!", e);
+                warning("Attempting to continue...");
+            }
+        });
     }
 
     private boolean handleMethodDecorators(JavaFileBatch batch, Set<? extends Element> elements) {
+        elements.forEach(element -> {
+            try {
+                MethodDecorator decorator = element.getAnnotation(MethodDecorator.class);
+                MethodDecoratorDriver driver = ClassUtils.instantiate(decorator.driver());
+                info("Identified Method Decorator", driver);
 
+
+            } catch (Exception e) {
+                error("Exception caught handling method decorators!", e);
+                warning("Attempting to continue...");
+            }
+        });
     }
 }

@@ -1,4 +1,6 @@
-package plasma.blackhole.annotations;
+package plasma.blackhole.api.annotations;
+
+import plasma.blackhole.api.MethodDecoratorDriver;
 
 import java.lang.annotation.*;
 
@@ -6,4 +8,6 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.CLASS)
 @Documented
 public @interface MethodDecorator {
+
+    Class<? extends MethodDecoratorDriver> driver();
 }
