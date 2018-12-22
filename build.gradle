@@ -22,7 +22,6 @@ repositories {
 dependencies {
     compile 'com.squareup:javapoet:1.11.1'
 //    compile 'de.ruedigermoeller:fst:2.57'
-    compile 'com.linkedin.paldb:paldb:1.2.0'
     compile 'com.google.code.findbugs:jsr305:3.0.2'
     compile 'com.austinv11.graphs:SimpleGraph:1.0.0'
     compile 'org.objenesis:objenesis:3.0.1'

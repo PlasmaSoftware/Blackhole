@@ -6,6 +6,9 @@ import plasma.blackhole.api.MethodDecoratorDriver;
 import plasma.blackhole.api.annotations.ClassDecorator;
 import plasma.blackhole.api.annotations.MethodDecorator;
 import plasma.blackhole.util.ClassUtils;
+import plasma.blackhole.util.DecoratorSpec;
+import plasma.blackhole.util.ResourceUtils;
+import plasma.blackhole.util.TemplateEngine;
 
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
@@ -40,13 +43,35 @@ public class DecoratorAnnotationProcessor extends AbstractBlackholeAnnotationPro
     }
 
     private boolean handleClassDecorators(JavaFileBatch batch, Set<? extends Element> elements) {
+        String processorTemplate = ResourceUtils.readFile("blackhole/templates/ClassDecoratorProcessorTemplate.java");
+        String annotationTemplate = ResourceUtils.readFile("blackhole/templates/ClassDecoratorTemplate.java");
+
         elements.forEach(element -> {
             try {
                 ClassDecorator decorator = element.getAnnotation(ClassDecorator.class);
                 ClassDecoratorDriver driver = ClassUtils.instantiate(decorator.driver());
                 info("Identified Class Decorator", driver);
 
+                driver.compileInit(batch);
 
+                DecoratorSpec spec = driver.decoratorSpec();
+
+                String newAnnotation = TemplateEngine.bind(annotationTemplate,
+                        "package", spec.getPackage(),
+                        "name", spec.getName(),
+                        "retention", spec.retentionPolicy().name());
+
+                batch.rawSource(spec.getPackage(), spec.getName(), newAnnotation);
+
+                String processorName = spec.getName() + "$$AnnotationProcessor";
+                String newProcessor = TemplateEngine.bind(processorTemplate,
+                        "package", spec.getPackage(),
+                        "name", processorName,
+                        "annotation", spec.getPackage() + "." + spec.getName(),
+                        "driver_package", driver.getClass().getPackage().getName(),
+                        "driver", driver.getClass().getTypeName());
+
+                batch.rawSource(spec.getPackage(), processorName, newProcessor);
             } catch (Exception e) {
                 error("Exception caught handling class decorators!", e);
                 warning("Attempting to continue...");

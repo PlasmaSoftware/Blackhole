@@ -1,5 +1,6 @@
 package plasma.blackhole.processor;
 
+import plasma.blackhole.api.annotations.RequireNoArgConstructor;
 import plasma.blackhole.util.ThrowableUtils;
 
 import javax.annotation.processing.*;
@@ -17,6 +18,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 //@WireService(Processor.class)
+@RequireNoArgConstructor
 @SupportedSourceVersion(SourceVersion.RELEASE_8)
 public abstract class AbstractBlackholeAnnotationProcessor extends AbstractProcessor {
 
