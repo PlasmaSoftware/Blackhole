@@ -42,8 +42,12 @@ public class RequireNoArgConstructorAnnotationProcessor extends AbstractBlackhol
                         throw new AssertionError("Implementations of classes with " +
                                 "@RequireNoArgConstructor must have a public no-arg constructor!");
                 }
+            } else if (e.getKind() == ElementKind.INTERFACE) {
+                mandatoryWarning("@RequireNoArgConstructor doesn't properly work on interfaces due to a lack of" +
+                        " @Inherited annotation support from javac! Consider converting interfaces toabstract" +
+                        " classes.");
             }
         });
-        return false;  //We don't change anything, only inspect
+        return true;
     }
 }

@@ -52,6 +52,7 @@ public class DecoratorAnnotationProcessor extends AbstractBlackholeAnnotationPro
                 warning("Attempting to continue...");
             }
         });
+        return !elements.isEmpty();
     }
 
     private boolean handleMethodDecorators(JavaFileBatch batch, Set<? extends Element> elements) {
@@ -67,5 +68,6 @@ public class DecoratorAnnotationProcessor extends AbstractBlackholeAnnotationPro
                 warning("Attempting to continue...");
             }
         });
+        return !elements.isEmpty();
     }
 }

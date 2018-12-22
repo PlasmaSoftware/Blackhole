@@ -40,6 +40,11 @@ public abstract class AbstractBlackholeAnnotationProcessor extends AbstractProce
     }
 
     @Override
+    public SourceVersion getSupportedSourceVersion() {
+        return SourceVersion.latest();
+    }
+
+    @Override
     public synchronized void init(ProcessingEnvironment processingEnv) {
         super.init(processingEnv);
         typeUtils = processingEnv.getTypeUtils();

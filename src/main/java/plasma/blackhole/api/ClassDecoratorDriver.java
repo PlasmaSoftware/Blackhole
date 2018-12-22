@@ -6,18 +6,15 @@ import plasma.blackhole.api.annotations.RunTimeOnly;
 import plasma.blackhole.processor.JavaFileBatch;
 import plasma.blackhole.util.DecoratorSpec;
 
-@RequireNoArgConstructor
-public interface ClassDecoratorDriver {
+@RequireNoArgConstructor //@Inherited annotations are not detected from interface implementations
+public abstract class ClassDecoratorDriver {
 
     @CompileTimeOnly
-    void compileInit(JavaFileBatch jfb);
+    public abstract void compileInit(JavaFileBatch jfb);
 
     @CompileTimeOnly
-    DecoratorSpec decoratorSpec();
+    public abstract DecoratorSpec decoratorSpec();
 
     @RunTimeOnly
-    void runtimeInit();
-
-    @RunTimeOnly
-
+    public abstract void runtimeInit();
 }
