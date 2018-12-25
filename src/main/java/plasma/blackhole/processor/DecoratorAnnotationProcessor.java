@@ -5,10 +5,7 @@ import plasma.blackhole.api.ClassDecoratorDriver;
 import plasma.blackhole.api.MethodDecoratorDriver;
 import plasma.blackhole.api.annotations.ClassDecorator;
 import plasma.blackhole.api.annotations.MethodDecorator;
-import plasma.blackhole.util.ClassUtils;
-import plasma.blackhole.util.DecoratorSpec;
-import plasma.blackhole.util.ResourceUtils;
-import plasma.blackhole.util.TemplateEngine;
+import plasma.blackhole.util.*;
 
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
@@ -16,7 +13,9 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
+import java.util.Arrays;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @WireService(Processor.class)
 public class DecoratorAnnotationProcessor extends AbstractBlackholeAnnotationProcessor {
@@ -69,7 +68,13 @@ public class DecoratorAnnotationProcessor extends AbstractBlackholeAnnotationPro
                         "name", processorName,
                         "annotation", spec.getPackage() + "." + spec.getName(),
                         "driver_package", driver.getClass().getPackage().getName(),
-                        "driver", driver.getClass().getTypeName());
+                        "driver", driver.getClass().getTypeName(),
+                        "interfaces", Arrays.stream(driver.implementInterfaces())
+                                .map(s -> "\"" + s + "\"").collect(Collectors.joining(",")),
+                        "fields", Arrays.stream(driver.addFields())
+                                .map(FieldDefinition::builderCode).collect(Collectors.joining(",")),
+                        "methods", Arrays.stream(driver.addMethods())
+                                .map(MethodDefinition::builderCode).collect(Collectors.joining(",")));
 
                 batch.rawSource(spec.getPackage(), processorName, newProcessor);
             } catch (Exception e) {

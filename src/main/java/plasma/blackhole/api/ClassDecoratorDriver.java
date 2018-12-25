@@ -16,16 +16,13 @@ public abstract class ClassDecoratorDriver {
     public abstract DecoratorSpec decoratorSpec();
 
     @CompileTimeOnly
-    public abstract FieldSpec[] addFields();
+    public abstract FieldDefinition[] addFields();
 
     @CompileTimeOnly
-    public abstract MethodSpec[] addMethods();
+    public abstract MethodDefinition[] addMethods();
 
     @CompileTimeOnly
-    public abstract boolean explicitOnly();
-
-    @RunTimeOnly
-    public abstract void runtimeInit();
+    public abstract String[] implementInterfaces();
 
     // Just hooks, to prevent breakage
 

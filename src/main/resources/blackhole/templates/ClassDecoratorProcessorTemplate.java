@@ -8,6 +8,8 @@ import com.austinv11.servicer.WireService;
 import plasma.blackhole.processor.AbstractDecoratorImplProcessor;
 import plasma.blackhole.api.ClassDecoratorDriver;
 import plasma.blackhole.api.MethodDecoratorDriver;
+import plasma.blackhole.util.FieldDefinition;
+import plasma.blackhole.util.MethodDefinition;
 import ${driver_package}.${driver};
 
 
@@ -43,5 +45,20 @@ public class ${name} extends AbstractDecoratorImplProcessor {
     @Override
     public String name() {
         return "${annotation}";
+    }
+
+    @Override
+    public String[] interfaces() {
+        return new String[]{${interfaces}};
+    }
+
+    @Override
+    public FieldDefinition[] fields() {
+        return new FieldDefinition[]{${fields}};
+    }
+
+    @Override
+    public MethodDefinition[] methods() {
+        return new MethodDefinition[]{${methods}};
     }
 }

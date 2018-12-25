@@ -13,4 +13,16 @@ public final class ClassUtils {
             throw new RuntimeException(e);
         }
     }
+
+    public static boolean isPrimitiveWrapper(Class<?> c) {
+        return Byte.class.isAssignableFrom(c)
+                || Boolean.class.isAssignableFrom(c)
+                || Character.class.isAssignableFrom(c)
+                || Short.class.isAssignableFrom(c)
+                || Integer.class.isAssignableFrom(c)
+                || Long.class.isAssignableFrom(c)
+                || Float.class.isAssignableFrom(c)
+                || Double.class.isAssignableFrom(c)
+                || Void.class.isAssignableFrom(c);
+    }
 }
