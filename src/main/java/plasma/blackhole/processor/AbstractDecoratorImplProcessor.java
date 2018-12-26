@@ -3,12 +3,14 @@ package plasma.blackhole.processor;
 import com.squareup.javapoet.*;
 import plasma.blackhole.api.ClassDecoratorDriver;
 import plasma.blackhole.api.MethodDecoratorDriver;
+import plasma.blackhole.api.annotations.Decorated;
 import plasma.blackhole.util.*;
 
 import javax.annotation.Generated;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.*;
 import javax.lang.model.type.TypeMirror;
+import javax.tools.StandardLocation;
 import java.io.File;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
@@ -248,6 +250,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+        Indexer<String> index = Indexer.readStringIndex(ResourceUtils.readFileOrEmpty("blackhole/decorated.idx"));
         JavaFileBatch batch = new JavaFileBatch();
         TypeElement generated = getElementUtils().getTypeElement("javax.annotation.Generated");
         TypeElement myAnnotation = getElementUtils().getTypeElement(getSupportedAnnotationTypes().stream()
@@ -266,6 +269,22 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                 .addMember("value", pkg() + "." + name())
                                 .build())
                             .addModifiers(Modifier.PUBLIC, Modifier.FINAL);
+
+                    Decorated decoratedAnnotation = te.getAnnotation(Decorated.class);
+                    if (decoratedAnnotation == null)
+                        decoratedAnnotation = new Decorated() {
+                            @Override
+                            public Class<? extends Annotation> annotationType() {
+                                return Decorated.class;
+                            }
+
+                            @Override
+                            public Class<?> originalClass() {
+                                return toClass(te.asType());
+                            }
+                        };
+
+                    b.addAnnotation(AnnotationSpec.get(decoratedAnnotation));
 
                     b.superclass(TypeName.get(te.asType()));
 
@@ -564,6 +583,8 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                         b.addMethod(builder.build());
                     });
 
+                    index.index(qn, newPkg + "." + newName);
+
                     return b.build();
                 });
             }
@@ -571,6 +592,9 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
 
         try {
             batch.publish(getFiler());
+            index.export(getFiler()
+                    .getResource(StandardLocation.CLASS_OUTPUT, "", "blackhole/decorated.idx")
+                    .openOutputStream());
         } catch (IOException e) {
             error("Exception caught running generated decorator processor!", e);
         }

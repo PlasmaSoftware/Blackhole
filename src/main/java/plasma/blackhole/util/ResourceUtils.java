@@ -18,4 +18,13 @@ public final class ResourceUtils {
             throw new RuntimeException(e);
         }
     }
+
+    //TODO: Make more efficient
+    public static String readFileOrEmpty(String path) {
+        try {
+            return readFile(path);
+        } catch (Exception e) {
+            return "";
+        }
+    }
 }

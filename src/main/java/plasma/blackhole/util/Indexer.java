@@ -41,6 +41,14 @@ public class Indexer<T> {
         return index.entrySet().stream();
     }
 
+    public T forwardLookup(String k) {
+        T first = find(k);
+        if (first != null && first.getClass().equals(String.class)) {
+            return forwardLookup((String) first);
+        }
+        return first;
+    }
+
     public void export(OutputStream stream1) {
         try (PrintStream stream = new PrintStream(stream1)) {
             for (Map.Entry<String, T> entry : index.entrySet()) {
@@ -90,5 +98,27 @@ public class Indexer<T> {
         }
 
         return i;
+    }
+
+    public static <T> Indexer<T> readIndex(Function<String, T> deserializer,
+                                           Function<T, String> serializer,
+                                           File file) {
+        try {
+            return readIndex(deserializer, serializer, new FileInputStream(file));
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static Indexer<String> readStringIndex(InputStream stream) {
+        return readIndex(s -> s, s -> s, stream);
+    }
+
+    public static Indexer<String> readStringIndex(File file) {
+        return readIndex(s -> s, s -> s, file);
+    }
+
+    public static Indexer<String> readStringIndex(String s) {
+        return readStringIndex(new ByteArrayInputStream(s.getBytes()));
     }
 }

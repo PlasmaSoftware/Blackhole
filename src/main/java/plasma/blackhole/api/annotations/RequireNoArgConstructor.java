@@ -12,6 +12,7 @@ import java.lang.annotation.*;
  * {@link java.lang.annotation.Inherited} meta-annotation: this annotation is only guaranteed to work when placed on
  * a class--not interfaces.
  */
+@Documented
 @Inherited
 @Retention(RetentionPolicy.SOURCE)
 @Target(ElementType.TYPE)
