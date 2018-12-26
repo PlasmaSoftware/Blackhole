@@ -3,13 +3,11 @@ package plasma.blackhole.processor;
 import com.squareup.javapoet.*;
 import plasma.blackhole.api.ClassDecoratorDriver;
 import plasma.blackhole.api.MethodDecoratorDriver;
-import plasma.blackhole.api.annotations.ClassDecorator;
 import plasma.blackhole.util.*;
 
 import javax.annotation.Generated;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.*;
-import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import java.io.File;
 import java.io.IOException;
@@ -18,7 +16,6 @@ import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -47,6 +44,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
     }
 
     private boolean claimType(TypeElement te) { //Used to force a single decorator per class in each round
+        //TODO: Is this actually needed?
         //FIXME: use in-memory state somehow. Static fields?
         try {
             File tracker = new File("./blackhole_claims.tmp");
@@ -252,323 +250,324 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         JavaFileBatch batch = new JavaFileBatch();
         TypeElement generated = getElementUtils().getTypeElement("javax.annotation.Generated");
-        TypeElement myAnnotation = getElementUtils().getTypeElement(getSupportedAnnotationTypes().stream().findFirst().get());
-        if (getTarget() == Target.TYPE) {
-            Class<? extends ClassDecoratorDriver> driver = classDriver();
+        TypeElement myAnnotation = getElementUtils().getTypeElement(getSupportedAnnotationTypes().stream()
+                .findFirst().get());
+        boolean isClassDecorator = getTarget() == Target.TYPE;
+        Class<?> driver = isClassDecorator ? classDriver() : methodDriver();
 
-            roundEnv.getElementsAnnotatedWith(annotation()).forEach(e -> {
-                TypeElement te = (TypeElement) e;
-                if (te.getKind() == ElementKind.CLASS && claimType(te)) {
-                    String qn = te.getQualifiedName().toString();
-                    String newName = qn.substring(qn.lastIndexOf('.')+1) + "$$" + name() + "$Decorated";
-                    String newPkg = qn.substring(0, qn.lastIndexOf('.'));
-                    batch.newClass(newPkg, newName, b -> {
-                        b.addAnnotation(AnnotationSpec.builder(Generated.class)
-                                    .addMember("value", pkg() + "." + name())
-                                    .build())
-                                .addModifiers(Modifier.PUBLIC, Modifier.FINAL);
+        roundEnv.getElementsAnnotatedWith(annotation()).forEach(e -> {
+            TypeElement te = (TypeElement) e;
+            if (te.getKind() == ElementKind.CLASS && claimType(te)) {
+                String qn = te.getQualifiedName().toString();
+                String newName = qn.substring(qn.lastIndexOf('.')+1) + "$$" + name() + "$Decorated";
+                String newPkg = qn.substring(0, qn.lastIndexOf('.'));
+                batch.newClass(newPkg, newName, b -> {
+                    b.addAnnotation(AnnotationSpec.builder(Generated.class)
+                                .addMember("value", pkg() + "." + name())
+                                .build())
+                            .addModifiers(Modifier.PUBLIC, Modifier.FINAL);
 
-                        b.superclass(TypeName.get(te.asType()));
+                    b.superclass(TypeName.get(te.asType()));
 
-                        //Implement added interfaces
-                        for (String i : interfaces()) {
-                            b.addSuperinterface(ClassName.bestGuess(i));
+                    //Implement added interfaces
+                    for (String i : interfaces()) {
+                        b.addSuperinterface(ClassName.bestGuess(i));
+                    }
+
+                    //Initialize the driver
+                    b.addField(FieldSpec
+                            .builder(TypeName.get(driver), "__DRIVER__",
+                                    Modifier.FINAL, Modifier.STATIC, Modifier.PRIVATE)
+                            .initializer(CodeBlock.of("new $T();", driver))
+                            .build());
+
+                    //Force static init of superclass
+                    b.addStaticBlock(CodeBlock.of("try { $T.forName($S); } catch ($T e) {}", Class.class, qn, Throwable.class));
+
+                    //Transfer all annotations except for the current decorator and a potential @Generated annotation
+                    te.getAnnotationMirrors().forEach(am -> {
+                        TypeElement element = (TypeElement) am.getAnnotationType().asElement();
+                        if (!element.equals(generated) && !element.equals(myAnnotation))
+                            b.addAnnotation(AnnotationSpec.get(am));
+                    });
+
+                    //Collect things to be decorated
+
+                    //First we need to collect ALL elements
+                    List<ExecutableElement> constructors = te.getEnclosedElements()
+                            .stream()
+                            .filter(ee -> ee instanceof ExecutableElement)
+                            .map(ExecutableElement.class::cast)
+                            .filter(ee -> ee.getKind() == ElementKind.CONSTRUCTOR)
+                            .collect(Collectors.toList());
+
+                    List<ExecutableElement> methods = te.getEnclosedElements()
+                            .stream()
+                            .filter(ee -> ee instanceof ExecutableElement)
+                            .map(ExecutableElement.class::cast)
+                            .filter(ee -> ee.getKind() != ElementKind.CONSTRUCTOR)
+                            .collect(Collectors.toList());
+
+                    List<VariableElement> fields = te.getEnclosedElements()
+                            .stream()
+                            .filter(ee -> ee instanceof VariableElement)
+                            .map(VariableElement.class::cast)
+                            .filter(ee -> ee.getKind() == ElementKind.FIELD)
+                            .collect(Collectors.toList());
+
+                    List<Method> interfaceMethods = Arrays.stream(interfaces())
+                            .map(s -> {
+                                try {
+                                    return Class.forName(s);
+                                } catch (ClassNotFoundException e1) {
+                                    throw new RuntimeException(e1);
+                                }
+                            }).flatMap(c -> Arrays.stream(c.getMethods()))
+                            .collect(Collectors.toList());
+
+                    //Next we coerce them all into unique MethodDefinitions and FieldDefinitions
+                    Set<MethodDefinition> staticMethodDefs = new HashSet<>();
+                    methods.stream()
+                            .filter(ee -> ee.getModifiers().contains(Modifier.STATIC))
+                            .forEach(ee -> staticMethodDefs.add(executableElementToMethodDef(ee)));
+
+                    Arrays.stream(methods())
+                            .filter(MethodDefinition::isStatic)
+                            .forEach(staticMethodDefs::add);
+
+
+                    Set<MethodDefinition> instanceMethodDefs = new HashSet<>();
+                    methods.stream()
+                            .filter(ee -> !ee.getModifiers().contains(Modifier.STATIC))
+                            .forEach(ee -> instanceMethodDefs.add(executableElementToMethodDef(ee)));
+
+                    interfaceMethods.forEach(m -> instanceMethodDefs.add(MethodDefinition.from(m)));
+
+                    Arrays.stream(methods())
+                            .filter(md -> !md.isStatic())
+                            .forEach(instanceMethodDefs::add);
+
+
+                    Set<FieldDefinition> staticFieldDefs = new HashSet<>();
+                    fields.stream()
+                            .filter(f -> f.getModifiers().contains(Modifier.STATIC))
+                            .forEach(f -> staticFieldDefs.add(variableElementToFieldDef(f)));
+
+                    Arrays.stream(fields())
+                            .filter(FieldDefinition::isStatic)
+                            .forEach(staticFieldDefs::add);
+
+
+                    Set<FieldDefinition> instanceFieldDefs = new HashSet<>();
+                    fields.stream()
+                            .filter(f -> !f.getModifiers().contains(Modifier.STATIC))
+                            .forEach(f -> instanceFieldDefs.add(variableElementToFieldDef(f)));
+
+                    Arrays.stream(fields())
+                            .filter(fieldDefinition -> !fieldDefinition.isStatic())
+                            .forEach(instanceFieldDefs::add);
+
+                    //Proxy fields and bootstrap
+                    b.addField(FieldSpec
+                            .builder(TypeName.get(FieldProxy.class), "__STATIC_FIELD_PROXY__",
+                                    Modifier.FINAL, Modifier.STATIC, Modifier.PRIVATE)
+                            .initializer(CodeBlock.of("new $T();", FieldProxy.class))
+                            .build());
+
+                    List<CodeBlock> staticFieldBindings = new ArrayList<>();
+                    staticFieldDefs.stream()
+                            .filter(FieldDefinition::isStatic)
+                            .forEach(v -> {
+                                String name = v.getName();
+                                staticFieldBindings.add(
+                                        CodeBlock.of(String.format("__STATIC_FIELD_PROXY__.bind($S, new $T(" +
+                                                "$S, $L, $L, $T.class, %s, %s);",
+                                                    makeGetterTemplate(v, false), makeSetterTemplate(v, false)),
+                                                name,
+                                                true,
+                                                v.getModifiers(),
+                                                v.getType(),
+                                                qn, name,
+                                                qn, name));
+                            });
+                    b.addStaticBlock(CodeBlock.join(staticFieldBindings, "\n"));
+
+                    b.addField(FieldSpec
+                            .builder(TypeName.get(FieldProxy.class), "__INSTANCE_FIELD_PROXY__",
+                                    Modifier.FINAL, Modifier.PRIVATE)
+                            .initializer(CodeBlock.of("new $T(__STATIC_FIELD_PROXY__);", FieldProxy.class))
+                            .build());
+
+                    List<CodeBlock> instanceFieldBindings = new ArrayList<>();
+                    instanceFieldDefs.stream()
+                            .filter(v -> !v.isStatic())
+                            .forEach(v -> {
+                                String name = v.getName();
+                                instanceFieldBindings.add(
+                                        CodeBlock.of(String.format("__INSTANCE_FIELD_PROXY__.bind($S, new $T(" +
+                                                        "$S, $L, $L, $T.class, %s, %s);",
+                                                makeGetterTemplate(v, true), makeSetterTemplate(v, true)),
+                                                name,
+                                                false,
+                                                v.getModifiers(),
+                                                v.getType(),
+                                                qn, name,
+                                                qn, name));
+                            });
+                    b.addMethod(MethodSpec.methodBuilder("__FIELD_PROXY_INIT__")
+                            .addModifiers(Modifier.FINAL, Modifier.PRIVATE)
+                            .addCode(CodeBlock.join(instanceFieldBindings, "\n"))
+                            .build());
+
+                    //Proxy methods and bootstrap
+                    b.addField(FieldSpec
+                            .builder(TypeName.get(FieldProxy.class), "__STATIC_METHOD_PROXY__",
+                                    Modifier.FINAL, Modifier.STATIC, Modifier.PRIVATE)
+                            .initializer(CodeBlock.of("new $T();", MethodProxy.class))
+                            .build());
+
+                    List<CodeBlock> staticMethodBindings = new ArrayList<>();
+                    staticMethodDefs.stream()
+                            .filter(MethodDefinition::isStatic)
+                            .forEach(m -> {
+                                String name = m.getName();
+                                List<String> args = Arrays.stream(m.getArgTypes())
+                                        .map(p -> p.getCanonicalName() + ".class")
+                                        .collect(Collectors.toList());
+                                staticMethodBindings.add(
+                                        CodeBlock.of("__STATIC_METHOD_PROXY__.bind($T.from($S, new Class[]{$L}), new $T(" +
+                                                        "$S, $L, $T.class, new Class[]{$L}, $L));",
+                                                MethodIdentifier.class,
+                                                name,
+                                                String.join(", ", args),
+                                                MethodBinding.class,
+                                                name,
+                                                m.getModifiers(),
+                                                m.getReturnType(),
+                                                String.join(", ", args),
+                                                generateInvoker(m)));
+                            });
+                    b.addStaticBlock(CodeBlock.join(staticMethodBindings, "\n"));
+
+                    b.addField(FieldSpec
+                            .builder(TypeName.get(FieldProxy.class), "__INSTANCE_METHOD_PROXY__",
+                                    Modifier.FINAL, Modifier.PRIVATE)
+                            .initializer(CodeBlock.of("new $T(__STATIC_METHOD_PROXY__);", FieldProxy.class))
+                            .build());
+
+                    List<CodeBlock> instanceMethodBindings = new ArrayList<>();
+                    instanceMethodDefs.stream()
+                            .filter(m -> !m.isStatic())
+                            .forEach(m -> {
+                                String name = m.getName();
+                                List<String> args = Arrays.stream(m.getArgTypes())
+                                        .map(p -> p.getCanonicalName() + ".class")
+                                        .collect(Collectors.toList());
+                                instanceMethodBindings.add(
+                                        CodeBlock.of("__INSTANCE_METHOD_PROXY__.bind($T.from($S, new Class[]{$L}), new $T(" +
+                                                        "$S, $L, $T.class, new Class[]{$L}, $L));",
+                                                MethodIdentifier.class,
+                                                name,
+                                                String.join(", ", args),
+                                                MethodBinding.class,
+                                                name,
+                                                m.getModifiers(),
+                                                m.getReturnType(),
+                                                String.join(", ", args),
+                                                generateInvoker(m)));
+                            });
+                    b.addMethod(MethodSpec.methodBuilder("__METHOD_PROXY_INIT__")
+                            .addModifiers(Modifier.FINAL, Modifier.PRIVATE)
+                            .addCode(CodeBlock.join(instanceMethodBindings, "\n"))
+                            .build());
+
+                    b.addStaticBlock(CodeBlock.of("__DRIVER__.runtimeInit(__STATIC_FIELD_PROXY__);"));
+
+                    constructors.forEach(con -> {
+                        MethodSpec.Builder builder = MethodSpec.constructorBuilder()
+                                .addModifiers(Modifier.PUBLIC);
+
+                        List<? extends VariableElement> parameters = con.getParameters();
+                        for (int i = 0; i < parameters.size(); i++) {
+                            VariableElement param = parameters.get(i);
+                            TypeName type = TypeName.get(param.asType());
+                            String name = "arg" + i;
+                            builder.addParameter(ParameterSpec.builder(type, name)
+                                    .addModifiers(param.getModifiers())
+                                    .build());
                         }
 
-                        //Initialize the driver
-                        b.addField(FieldSpec
-                                .builder(TypeName.get(ClassDecoratorDriver.class), "__DRIVER__",
-                                        Modifier.FINAL, Modifier.STATIC, Modifier.PRIVATE)
-                                .initializer(CodeBlock.of("new $T();", driver))
-                                .build());
+                        String argListString = IntStream.range(0, parameters.size()).mapToObj(i -> "arg" + i)
+                                .collect(Collectors.joining(","));
 
-                        //Force static init of superclass
-                        b.addStaticBlock(CodeBlock.of("try { $T.forName($S); } catch ($T e) {}", Class.class, qn, Throwable.class));
+                        builder.addStatement("super(" + argListString + ");");
 
-                        //Transfer all annotations except for the current decorator and a potential @Generated annotation
-                        te.getAnnotationMirrors().forEach(am -> {
-                            TypeElement element = (TypeElement) am.getAnnotationType().asElement();
-                            if (!element.equals(generated) && !element.equals(myAnnotation))
-                                b.addAnnotation(AnnotationSpec.get(am));
-                        });
+                        builder.addStatement("this.__FIELD_PROXY_INIT__();");
+                        builder.addStatement("this.__METHOD_PROXY_INIT__();");
 
-                        //Collect things to be decorated
-
-                        //First we need to collect ALL elements
-                        List<ExecutableElement> constructors = te.getEnclosedElements()
-                                .stream()
-                                .filter(ee -> ee instanceof ExecutableElement)
-                                .map(ExecutableElement.class::cast)
-                                .filter(ee -> ee.getKind() == ElementKind.CONSTRUCTOR)
-                                .collect(Collectors.toList());
-
-                        List<ExecutableElement> methods = te.getEnclosedElements()
-                                .stream()
-                                .filter(ee -> ee instanceof ExecutableElement)
-                                .map(ExecutableElement.class::cast)
-                                .filter(ee -> ee.getKind() != ElementKind.CONSTRUCTOR)
-                                .collect(Collectors.toList());
-
-                        List<VariableElement> fields = te.getEnclosedElements()
-                                .stream()
-                                .filter(ee -> ee instanceof VariableElement)
-                                .map(VariableElement.class::cast)
-                                .filter(ee -> ee.getKind() == ElementKind.FIELD)
-                                .collect(Collectors.toList());
-
-                        List<Method> interfaceMethods = Arrays.stream(interfaces())
-                                .map(s -> {
-                                    try {
-                                        return Class.forName(s);
-                                    } catch (ClassNotFoundException e1) {
-                                        throw new RuntimeException(e1);
-                                    }
-                                }).flatMap(c -> Arrays.stream(c.getMethods()))
-                                .collect(Collectors.toList());
-
-                        //Next we coerce them all into unique MethodDefinitions and FieldDefinitions
-                        Set<MethodDefinition> staticMethodDefs = new HashSet<>();
-                        methods.stream()
-                                .filter(ee -> ee.getModifiers().contains(Modifier.STATIC))
-                                .forEach(ee -> staticMethodDefs.add(executableElementToMethodDef(ee)));
-
-                        Arrays.stream(methods())
-                                .filter(MethodDefinition::isStatic)
-                                .forEach(staticMethodDefs::add);
-
-
-                        Set<MethodDefinition> instanceMethodDefs = new HashSet<>();
-                        methods.stream()
-                                .filter(ee -> !ee.getModifiers().contains(Modifier.STATIC))
-                                .forEach(ee -> instanceMethodDefs.add(executableElementToMethodDef(ee)));
-
-                        interfaceMethods.forEach(m -> instanceMethodDefs.add(MethodDefinition.from(m)));
-
-                        Arrays.stream(methods())
-                                .filter(md -> !md.isStatic())
-                                .forEach(instanceMethodDefs::add);
-
-                        Set<FieldDefinition> staticFieldDefs = new HashSet<>();
-                        fields.stream()
-                                .filter(f -> f.getModifiers().contains(Modifier.STATIC))
-                                .forEach(f -> staticFieldDefs.add(variableElementToFieldDef(f)));
-
-                        Arrays.stream(fields())
-                                .filter(FieldDefinition::isStatic)
-                                .forEach(staticFieldDefs::add);
-
-
-                        Set<FieldDefinition> instanceFieldDefs = new HashSet<>();
-                        fields.stream()
-                                .filter(f -> !f.getModifiers().contains(Modifier.STATIC))
-                                .forEach(f -> instanceFieldDefs.add(variableElementToFieldDef(f)));
-
-                        Arrays.stream(fields())
-                                .filter(fieldDefinition -> !fieldDefinition.isStatic())
-                                .forEach(instanceFieldDefs::add);
-
-                        //Proxy fields and bootstrap
-                        b.addField(FieldSpec
-                                .builder(TypeName.get(FieldProxy.class), "__STATIC_FIELD_PROXY__",
-                                        Modifier.FINAL, Modifier.STATIC, Modifier.PRIVATE)
-                                .initializer(CodeBlock.of("new $T();", FieldProxy.class))
-                                .build());
-
-                        List<CodeBlock> staticFieldBindings = new ArrayList<>();
-                        staticFieldDefs.stream()
-                                .filter(FieldDefinition::isStatic)
-                                .forEach(v -> {
-                                    String name = v.getName();
-                                    staticFieldBindings.add(
-                                            CodeBlock.of(String.format("__STATIC_FIELD_PROXY__.bind($S, new $T(" +
-                                                    "$S, $L, $L, $T.class, %s, %s);",
-                                                        makeGetterTemplate(v, false), makeSetterTemplate(v, false)),
-                                                    name,
-                                                    true,
-                                                    v.getModifiers(),
-                                                    v.getType(),
-                                                    qn, name,
-                                                    qn, name));
-                                });
-                        b.addStaticBlock(CodeBlock.join(staticFieldBindings, "\n"));
-
-                        b.addField(FieldSpec
-                                .builder(TypeName.get(FieldProxy.class), "__INSTANCE_FIELD_PROXY__",
-                                        Modifier.FINAL, Modifier.PRIVATE)
-                                .initializer(CodeBlock.of("new $T(__STATIC_FIELD_PROXY__);", FieldProxy.class))
-                                .build());
-
-                        List<CodeBlock> instanceFieldBindings = new ArrayList<>();
-                        instanceFieldDefs.stream()
-                                .filter(v -> !v.isStatic())
-                                .forEach(v -> {
-                                    String name = v.getName();
-                                    instanceFieldBindings.add(
-                                            CodeBlock.of(String.format("__INSTANCE_FIELD_PROXY__.bind($S, new $T(" +
-                                                            "$S, $L, $L, $T.class, %s, %s);",
-                                                    makeGetterTemplate(v, true), makeSetterTemplate(v, true)),
-                                                    name,
-                                                    false,
-                                                    v.getModifiers(),
-                                                    v.getType(),
-                                                    qn, name,
-                                                    qn, name));
-                                });
-                        b.addMethod(MethodSpec.methodBuilder("__FIELD_PROXY_INIT__")
-                                .addModifiers(Modifier.FINAL, Modifier.PRIVATE)
-                                .addCode(CodeBlock.join(instanceFieldBindings, "\n"))
-                                .build());
-
-                        //Proxy methods and bootstrap
-                        b.addField(FieldSpec
-                                .builder(TypeName.get(FieldProxy.class), "__STATIC_METHOD_PROXY__",
-                                        Modifier.FINAL, Modifier.STATIC, Modifier.PRIVATE)
-                                .initializer(CodeBlock.of("new $T();", MethodProxy.class))
-                                .build());
-
-                        List<CodeBlock> staticMethodBindings = new ArrayList<>();
-                        staticMethodDefs.stream()
-                                .filter(MethodDefinition::isStatic)
-                                .forEach(m -> {
-                                    String name = m.getName();
-                                    List<String> args = Arrays.stream(m.getArgTypes())
-                                            .map(p -> p.getCanonicalName() + ".class")
-                                            .collect(Collectors.toList());
-                                    staticMethodBindings.add(
-                                            CodeBlock.of("__STATIC_METHOD_PROXY__.bind($T.from($S, new Class[]{$L}), new $T(" +
-                                                            "$S, $L, $T.class, new Class[]{$L}, $L));",
-                                                    MethodIdentifier.class,
-                                                    name,
-                                                    String.join(", ", args),
-                                                    MethodBinding.class,
-                                                    name,
-                                                    m.getModifiers(),
-                                                    m.getReturnType(),
-                                                    String.join(", ", args),
-                                                    generateInvoker(m)));
-                                });
-                        b.addStaticBlock(CodeBlock.join(staticMethodBindings, "\n"));
-
-                        b.addField(FieldSpec
-                                .builder(TypeName.get(FieldProxy.class), "__INSTANCE_METHOD_PROXY__",
-                                        Modifier.FINAL, Modifier.PRIVATE)
-                                .initializer(CodeBlock.of("new $T(__STATIC_METHOD_PROXY__);", FieldProxy.class))
-                                .build());
-
-                        List<CodeBlock> instanceMethodBindings = new ArrayList<>();
-                        instanceMethodDefs.stream()
-                                .filter(m -> !m.isStatic())
-                                .forEach(m -> {
-                                    String name = m.getName();
-                                    List<String> args = Arrays.stream(m.getArgTypes())
-                                            .map(p -> p.getCanonicalName() + ".class")
-                                            .collect(Collectors.toList());
-                                    instanceMethodBindings.add(
-                                            CodeBlock.of("__INSTANCE_METHOD_PROXY__.bind($T.from($S, new Class[]{$L}), new $T(" +
-                                                            "$S, $L, $T.class, new Class[]{$L}, $L));",
-                                                    MethodIdentifier.class,
-                                                    name,
-                                                    String.join(", ", args),
-                                                    MethodBinding.class,
-                                                    name,
-                                                    m.getModifiers(),
-                                                    m.getReturnType(),
-                                                    String.join(", ", args),
-                                                    generateInvoker(m)));
-                                });
-                        b.addMethod(MethodSpec.methodBuilder("__METHOD_PROXY_INIT__")
-                                .addModifiers(Modifier.FINAL, Modifier.PRIVATE)
-                                .addCode(CodeBlock.join(instanceMethodBindings, "\n"))
-                                .build());
-
-                        b.addStaticBlock(CodeBlock.of("__DRIVER__.cinit(__STATIC_FIELD_PROXY__);"));
-
-                        constructors.forEach(con -> {
-                            MethodSpec.Builder builder = MethodSpec.constructorBuilder()
-                                    .addModifiers(Modifier.PUBLIC);
-
-                            List<? extends VariableElement> parameters = con.getParameters();
-                            for (int i = 0; i < parameters.size(); i++) {
-                                VariableElement param = parameters.get(i);
-                                TypeName type = TypeName.get(param.asType());
-                                String name = "arg" + i;
-                                builder.addParameter(ParameterSpec.builder(type, name)
-                                        .addModifiers(param.getModifiers())
-                                        .build());
-                            }
-
-                            String argListString = IntStream.range(0, parameters.size()).mapToObj(i -> "arg" + i)
-                                    .collect(Collectors.joining(","));
-
-                            builder.addStatement("super(" + argListString + ");");
-
-                            builder.addStatement("this.__FIELD_PROXY_INIT__();");
-                            builder.addStatement("this.__METHOD_PROXY_INIT__();");
-
+                        if (isClassDecorator) {
                             builder.addStatement("__DRIVER__.init(this.__INSTANCE_FIELD_PROXY__, " +
-                                    "this.__INSTANCE_METHOD_PROXY__$L);", argListString.isEmpty() ? "" : ", " + argListString);
+                                    "this.__INSTANCE_METHOD_PROXY__$L);", argListString.isEmpty()
+                                        ? "" : ", " + argListString);
+                        }
 
-                            b.addMethod(builder.build());
-                        });
-
-                        //Only new fields need to be redefined
-                        Arrays.stream(fields()).forEach(fd -> {
-                            FieldSpec.Builder builder = FieldSpec.builder(fd.getType(), fd.getName(),
-                                    reflectModsToProcessorMods(fd.getModifiers()));
-
-                            for (AnnotationDefinition ad : fd.getAnnotations()) {
-                                AnnotationSpec.Builder aBuilder = AnnotationSpec.builder(ad.getAnnotation());
-                                ad.getBindings().forEach((k, v) -> {
-                                    aBuilder.addMember(k, "$L", AnnotationDefinition.toAnnotationLiteral(v));
-                                });
-                                builder.addAnnotation(aBuilder.build());
-                            }
-
-                            b.addField(builder.build());
-                        });
-
-                        Stream.concat(staticMethodDefs.stream(), instanceMethodDefs.stream()).forEach(md -> {
-                            MethodSpec.Builder builder = MethodSpec.methodBuilder(md.getName())
-                                    .addModifiers(reflectModsToProcessorMods(md.getModifiers()))
-                                    .returns(md.getReturnType());
-
-                            for (int i = 0; i < md.getArgTypes().length; i++) {
-                                Class<?> param = md.getArgTypes()[i];
-                                builder.addParameter(ParameterSpec.builder(param, "arg" + i).build());
-                            }
-
-                            boolean isStatic = java.lang.reflect.Modifier.isStatic(md.getModifiers());
-                            int argLen = md.getArgTypes().length;
-                            String stmt = String.format("__%1$s_FIELD_PROXY__, __%1$s__METHOD_PROXY__, __%1$s__METHOD_PROXY__",
-                                    isStatic ? "STATIC" : "INSTANCE");
-                            String temp = md.getReturnType().equals(void.class) ? "" : "return ";
-
-                            builder.addStatement(temp + "__DRIVER__.methodWrap($L.getBinding($T.from($S, new Class[]{$L})$L);",
-                                    stmt, MethodIdentifier.class, md.getName(),
-                                    Arrays.stream(md.getArgTypes()).map(c -> c.getCanonicalName() + ".class")
-                                            .collect(Collectors.joining(",")),
-                                    argLen == 0 ? "" : "," + IntStream.range(0, argLen).mapToObj(i -> "arg" + i)
-                                            .collect(Collectors.joining(",")));
-
-                            for (AnnotationDefinition ad : md.getAnnotations()) {
-                                AnnotationSpec.Builder aBuilder = AnnotationSpec.builder(ad.getAnnotation());
-                                ad.getBindings().forEach((k, v) -> {
-                                    aBuilder.addMember(k, "$L", AnnotationDefinition.toAnnotationLiteral(v));
-                                });
-                                builder.addAnnotation(aBuilder.build());
-                            }
-
-                            b.addMethod(builder.build());
-                        });
-
-                        return b.build();
+                        b.addMethod(builder.build());
                     });
-                }
-            });
-        } else {
-            Class<? extends MethodDecoratorDriver> driver = methodDriver();
-            //TODO
-        }
+
+                    //Only new fields need to be redefined
+                    Arrays.stream(fields()).forEach(fd -> {
+                        FieldSpec.Builder builder = FieldSpec.builder(fd.getType(), fd.getName(),
+                                reflectModsToProcessorMods(fd.getModifiers()));
+
+                        for (AnnotationDefinition ad : fd.getAnnotations()) {
+                            AnnotationSpec.Builder aBuilder = AnnotationSpec.builder(ad.getAnnotation());
+                            ad.getBindings().forEach((k, v) -> {
+                                aBuilder.addMember(k, "$L", AnnotationDefinition.toAnnotationLiteral(v));
+                            });
+                            builder.addAnnotation(aBuilder.build());
+                        }
+
+                        b.addField(builder.build());
+                    });
+
+                    Stream.concat(staticMethodDefs.stream(), instanceMethodDefs.stream()).forEach(md -> {
+                        MethodSpec.Builder builder = MethodSpec.methodBuilder(md.getName())
+                                .addModifiers(reflectModsToProcessorMods(md.getModifiers()))
+                                .returns(md.getReturnType());
+
+                        for (int i = 0; i < md.getArgTypes().length; i++) {
+                            Class<?> param = md.getArgTypes()[i];
+                            builder.addParameter(ParameterSpec.builder(param, "arg" + i).build());
+                        }
+
+                        boolean isStatic = java.lang.reflect.Modifier.isStatic(md.getModifiers());
+                        int argLen = md.getArgTypes().length;
+                        String stmt = String.format("__%1$s_FIELD_PROXY__, __%1$s__METHOD_PROXY__, __%1$s__METHOD_PROXY__",
+                                isStatic ? "STATIC" : "INSTANCE");
+                        String temp = md.getReturnType().equals(void.class) ? "" : "return ";
+
+                        builder.addStatement(temp + "__DRIVER__.methodWrap($L.getBinding($T.from($S, new Class[]{$L})$L);",
+                                stmt, MethodIdentifier.class, md.getName(),
+                                Arrays.stream(md.getArgTypes()).map(c -> c.getCanonicalName() + ".class")
+                                        .collect(Collectors.joining(",")),
+                                argLen == 0 ? "" : "," + IntStream.range(0, argLen).mapToObj(i -> "arg" + i)
+                                        .collect(Collectors.joining(",")));
+
+                        for (AnnotationDefinition ad : md.getAnnotations()) {
+                            AnnotationSpec.Builder aBuilder = AnnotationSpec.builder(ad.getAnnotation());
+                            ad.getBindings().forEach((k, v) -> {
+                                aBuilder.addMember(k, "$L", AnnotationDefinition.toAnnotationLiteral(v));
+                            });
+                            builder.addAnnotation(aBuilder.build());
+                        }
+
+                        b.addMethod(builder.build());
+                    });
+
+                    return b.build();
+                });
+            }
+        });
 
         try {
             batch.publish(getFiler());

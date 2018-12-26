@@ -7,14 +7,19 @@ import plasma.blackhole.processor.JavaFileBatch;
 import plasma.blackhole.util.*;
 
 @RequireNoArgConstructor //@Inherited annotations are not detected from interface implementations
-public abstract class ClassDecoratorDriver {
+public abstract class ClassDecoratorDriver implements DecoratorDriver {
 
+    ClassDecoratorDriver() {}
+
+    @Override
     @CompileTimeOnly
     public abstract void compileInit(JavaFileBatch jfb);
 
+    @Override
     @CompileTimeOnly
     public abstract DecoratorSpec decoratorSpec();
 
+    @Override
     @CompileTimeOnly
     public abstract FieldDefinition[] addFields();
 
@@ -26,14 +31,16 @@ public abstract class ClassDecoratorDriver {
 
     // Just hooks, to prevent breakage
 
+    @Override
     @RunTimeOnly
-    public abstract void cinit(FieldProxy proxy);
+    public abstract void runtimeInit(FieldProxy proxy);
 
     @RunTimeOnly
     public abstract void init(FieldProxy fieldProxy, MethodProxy methodProxy, Object... args);
 
     // Total wrap
 
+    @Override
     @RunTimeOnly
     public abstract Object methodWrap(FieldProxy fieldProxy, MethodProxy methodProxy, MethodBinding original, Object... args);
 }

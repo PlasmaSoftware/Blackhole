@@ -2,6 +2,7 @@ package plasma.blackhole.util;
 
 import java.lang.annotation.RetentionPolicy;
 
+//TODO: Add potential fields for metadata
 public class DecoratorSpec {
 
     private final String pkg, name;

@@ -19,7 +19,7 @@ public class ${name} extends AbstractDecoratorImplProcessor {
 
     @Override
     public AbstractDecoratorImplProcessor.Target getTarget() {
-        return AbstractDecoratorImplProcessor.Target.TYPE;
+        return AbstractDecoratorImplProcessor.Target.METHOD;
     }
 
     @Override
@@ -29,12 +29,12 @@ public class ${name} extends AbstractDecoratorImplProcessor {
 
     @Override
     public ClassDecoratorDriver classDriver() {
-        return ${driver}.class;
+        return null;
     }
 
     @Override
     public MethodDecoratorDriver methodDriver() {
-        return null;
+        return ${driver}.class;
     }
 
     @Override
@@ -49,7 +49,7 @@ public class ${name} extends AbstractDecoratorImplProcessor {
 
     @Override
     public String[] interfaces() {
-        return new String[]{${interfaces}};
+        return new String[0];
     }
 
     @Override
@@ -59,6 +59,6 @@ public class ${name} extends AbstractDecoratorImplProcessor {
 
     @Override
     public MethodDefinition[] methods() {
-        return new MethodDefinition[]{${methods}};
+        return new MethodDefinition[0];
     }
 }
