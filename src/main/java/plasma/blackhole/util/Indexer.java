@@ -25,6 +25,10 @@ public class Indexer<T> {
         return index.get(k);
     }
 
+    public boolean hasKey(String k) {
+        return index.containsKey(k);
+    }
+
     public Set<String> keys() {
         return index.keySet();
     }
@@ -43,7 +47,7 @@ public class Indexer<T> {
 
     public T forwardLookup(String k) {
         T first = find(k);
-        if (first != null && first.getClass().equals(String.class)) {
+        if (first instanceof String && hasKey((String) first)) {
             return forwardLookup((String) first);
         }
         return first;
@@ -57,6 +61,7 @@ public class Indexer<T> {
                 stream.print(key);
                 stream.print(SEP);
                 stream.print(serializer.apply(value));
+                stream.print(SEP);
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -92,6 +97,13 @@ public class Indexer<T> {
                 } else {
                     value.append(c);
                 }
+            }
+
+            if (key != null) {
+                if (value == null) throw new IllegalArgumentException("Corrupted index?");
+
+                //Cleanup remaining data
+                i.index(key.toString(), deserializer.apply(value.toString()));
             }
         } catch (IOException e) {
             throw new RuntimeException(e);

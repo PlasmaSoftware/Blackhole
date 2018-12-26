@@ -39,7 +39,7 @@ public class Blackhole {
     }
 
     public static <T> Class<? extends T> decorate(Class<T> clazz) throws NotDecoratedException {
-        if (!isDecorated(clazz)) throw new NotDecoratedException("Class " + clazz + " is not decorated!");
+        if (isDecorated(clazz)) return clazz;
 
         if (cache.containsKey(clazz))
             return cache.get(clazz);
@@ -51,7 +51,7 @@ public class Blackhole {
             cache.put(clazz, decoratedType);
             return decoratedType;
         } catch (ClassNotFoundException e) {
-            throw new RuntimeException(e);
+            throw new NotDecoratedException("Class " + clazz + " is not decorated!");
         }
     }
 
