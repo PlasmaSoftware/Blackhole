@@ -21,10 +21,10 @@ interface DecoratorDriver { //Impls need to be manually hooked
     //TODO: Pass decorated class info
 
     @RunTimeOnly
-    void runtimeInit(FieldProxy proxy);
+    void runtimeInit(Class<?> clazz, FieldProxy proxy);
 
     // Total wrap
 
     @RunTimeOnly
-    Object methodWrap(FieldProxy fieldProxy, MethodProxy methodProxy, MethodBinding original, Object... args);
+    Object methodWrap(Class<?> clazz, FieldProxy fieldProxy, MethodProxy methodProxy, MethodBinding original, Object... args);
 }

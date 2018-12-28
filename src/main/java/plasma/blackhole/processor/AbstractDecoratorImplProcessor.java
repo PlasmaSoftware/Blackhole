@@ -311,6 +311,11 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                     Modifier.FINAL, Modifier.STATIC, Modifier.PRIVATE)
                             .initializer(CodeBlock.of("new $T();", driver))
                             .build());
+                    b.addField(FieldSpec
+                            .builder(TypeName.get(Class.class), "__ORIGINAL_CLASS__",
+                                    Modifier.FINAL, Modifier.STATIC, Modifier.PRIVATE)
+                            .initializer(CodeBlock.of("$T.class", decoratedAnnotation))
+                            .build());
 
                     //Force static init of superclass
                     b.addStaticBlock(CodeBlock.of("try { $T.forName($S); } catch ($T e) {}", Class.class, qn,
@@ -520,7 +525,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                             .addCode(CodeBlock.join(instanceMethodBindings, "\n"))
                             .build());
 
-                    b.addStaticBlock(CodeBlock.of("__DRIVER__.runtimeInit(__STATIC_FIELD_PROXY__);"));
+                    b.addStaticBlock(CodeBlock.of("__DRIVER__.runtimeInit(__ORIGINAL_CLASS__, __STATIC_FIELD_PROXY__);"));
 
                     constructors.forEach(con -> {
                         MethodSpec.Builder builder = MethodSpec.constructorBuilder()
@@ -546,7 +551,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                         builder.addStatement("this.__METHOD_PROXY_INIT__();");
 
                         if (isClassDecorator) {
-                            builder.addStatement("__DRIVER__.init(this.__INSTANCE_FIELD_PROXY__, " +
+                            builder.addStatement("__DRIVER__.init(__ORIGINAL_CLASS__, this.__INSTANCE_FIELD_PROXY__, " +
                                     "this.__INSTANCE_METHOD_PROXY__$L);", argListString.isEmpty()
                                     ? "" : ", " + argListString);
                         }
@@ -589,7 +594,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                     isStatic ? "STATIC" : "INSTANCE");
                             String temp = md.getReturnType().equals(void.class) ? "" : "return ";
 
-                            builder.addStatement(temp + "__DRIVER__.methodWrap($L.getBinding($T.from($S, new " +
+                            builder.addStatement(temp + "__DRIVER__.methodWrap(__ORIGINAL_CLASS__, $L.getBinding($T.from($S, new " +
                                             "Class[]{$L})$L);",
                                     stmt, MethodIdentifier.class, md.getName(),
                                     Arrays.stream(md.getArgTypes()).map(c -> c.getCanonicalName() + ".class")

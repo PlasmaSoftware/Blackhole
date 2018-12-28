@@ -27,11 +27,11 @@ public abstract class MethodDecoratorDriver implements DecoratorDriver {
 
     @Override
     @RunTimeOnly
-    public abstract void runtimeInit(FieldProxy proxy);
+    public abstract void runtimeInit(Class<?> clazz, FieldProxy proxy);
 
     // Total wrap
 
     @Override
     @RunTimeOnly
-    public abstract Object methodWrap(FieldProxy fieldProxy, MethodProxy methodProxy, MethodBinding original, Object... args);
+    public abstract Object methodWrap(Class<?> clazz, FieldProxy fieldProxy, MethodProxy methodProxy, MethodBinding original, Object... args);
 }
