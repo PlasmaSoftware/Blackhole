@@ -211,18 +211,25 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
         }
         builder.setArgTypes(args);
 
+        //Remove decorator annotations
+        int sizeReduction = 0;
         AnnotationDefinition[] annotations = new AnnotationDefinition[ee.getAnnotationMirrors().size()];
         for (int i = 0; i < annotations.length; i++) {
             AnnotationMirror am = ee.getAnnotationMirrors().get(i);
+            if (toClass(am.getAnnotationType()).equals(annotation())) {
+                sizeReduction++;
+                continue;
+            }
+
             AnnotationDefinition.Builder ab = AnnotationDefinition.builder(toClass(am.getAnnotationType()));
             am.getElementValues().forEach((k, v) -> {
                 String name = k.getSimpleName().toString();
                 Object o = v.getValue();
                 ab.bindParameter(name, o);
             });
-            annotations[i] = ab.build();
+            annotations[i-sizeReduction] = ab.build();
         }
-        builder.setAnnotations(annotations);
+        builder.setAnnotations(Arrays.copyOf(annotations, annotations.length - sizeReduction));
 
         return builder.build();
     }
@@ -258,16 +265,21 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
         boolean isClassDecorator = getTarget() == Target.TYPE;
         Class<?> driver = isClassDecorator ? classDriver() : methodDriver();
 
-        roundEnv.getElementsAnnotatedWith(annotation()).forEach(e -> {
-            TypeElement te = (TypeElement) e;
+        for (Element e : roundEnv.getElementsAnnotatedWith(annotation())) {
+            TypeElement te;
+            if (isClassDecorator)
+                te = (TypeElement) e;
+            else
+                te = (TypeElement) e.getEnclosingElement();
+
             if (te.getKind() == ElementKind.CLASS && claimType(te)) {
                 String qn = te.getQualifiedName().toString();
-                String newName = qn.substring(qn.lastIndexOf('.')+1) + "$$" + name() + "$Decorated";
+                String newName = qn.substring(qn.lastIndexOf('.') + 1) + "$$" + name() + "$Decorated";
                 String newPkg = qn.substring(0, qn.lastIndexOf('.'));
                 batch.newClass(newPkg, newName, b -> {
                     b.addAnnotation(AnnotationSpec.builder(Generated.class)
-                                .addMember("value", pkg() + "." + name())
-                                .build())
+                            .addMember("value", pkg() + "." + name())
+                            .build())
                             .addModifiers(Modifier.PUBLIC, Modifier.FINAL);
 
                     Decorated decoratedAnnotation = te.getAnnotation(Decorated.class);
@@ -283,8 +295,8 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                 return toClass(te.asType());
                             }
                         };
-
-                    b.addAnnotation(AnnotationSpec.get(decoratedAnnotation));
+                    AnnotationSpec decoratedSpec = AnnotationSpec.get(decoratedAnnotation);
+                    b.addAnnotation(decoratedSpec);
 
                     b.superclass(TypeName.get(te.asType()));
 
@@ -301,7 +313,8 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                             .build());
 
                     //Force static init of superclass
-                    b.addStaticBlock(CodeBlock.of("try { $T.forName($S); } catch ($T e) {}", Class.class, qn, Throwable.class));
+                    b.addStaticBlock(CodeBlock.of("try { $T.forName($S); } catch ($T e) {}", Class.class, qn,
+                            Throwable.class));
 
                     //Transfer all annotations except for the current decorator and a potential @Generated annotation
                     te.getAnnotationMirrors().forEach(am -> {
@@ -366,6 +379,11 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                             .filter(md -> !md.isStatic())
                             .forEach(instanceMethodDefs::add);
 
+                    Set<MethodDefinition> annotatedMethods = methods.stream()
+                            .filter(ee -> ee.getAnnotation(annotation()) != null)
+                            .map(this::executableElementToMethodDef)
+                            .collect(Collectors.toSet());
+
 
                     Set<FieldDefinition> staticFieldDefs = new HashSet<>();
                     fields.stream()
@@ -400,8 +418,8 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                 String name = v.getName();
                                 staticFieldBindings.add(
                                         CodeBlock.of(String.format("__STATIC_FIELD_PROXY__.bind($S, new $T(" +
-                                                "$S, $L, $L, $T.class, %s, %s);",
-                                                    makeGetterTemplate(v, false), makeSetterTemplate(v, false)),
+                                                        "$S, $L, $L, $T.class, %s, %s);",
+                                                makeGetterTemplate(v, false), makeSetterTemplate(v, false)),
                                                 name,
                                                 true,
                                                 v.getModifiers(),
@@ -454,7 +472,8 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                         .map(p -> p.getCanonicalName() + ".class")
                                         .collect(Collectors.toList());
                                 staticMethodBindings.add(
-                                        CodeBlock.of("__STATIC_METHOD_PROXY__.bind($T.from($S, new Class[]{$L}), new $T(" +
+                                        CodeBlock.of("__STATIC_METHOD_PROXY__.bind($T.from($S, new Class[]{$L}), new " +
+                                                        "$T(" +
                                                         "$S, $L, $T.class, new Class[]{$L}, $L));",
                                                 MethodIdentifier.class,
                                                 name,
@@ -483,7 +502,8 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                         .map(p -> p.getCanonicalName() + ".class")
                                         .collect(Collectors.toList());
                                 instanceMethodBindings.add(
-                                        CodeBlock.of("__INSTANCE_METHOD_PROXY__.bind($T.from($S, new Class[]{$L}), new $T(" +
+                                        CodeBlock.of("__INSTANCE_METHOD_PROXY__.bind($T.from($S, new Class[]{$L}), " +
+                                                        "new $T(" +
                                                         "$S, $L, $T.class, new Class[]{$L}, $L));",
                                                 MethodIdentifier.class,
                                                 name,
@@ -504,7 +524,8 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
 
                     constructors.forEach(con -> {
                         MethodSpec.Builder builder = MethodSpec.constructorBuilder()
-                                .addModifiers(Modifier.PUBLIC);
+                                .addModifiers(Modifier.PUBLIC)
+                                .addAnnotation(decoratedSpec);
 
                         List<? extends VariableElement> parameters = con.getParameters();
                         for (int i = 0; i < parameters.size(); i++) {
@@ -527,7 +548,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                         if (isClassDecorator) {
                             builder.addStatement("__DRIVER__.init(this.__INSTANCE_FIELD_PROXY__, " +
                                     "this.__INSTANCE_METHOD_PROXY__$L);", argListString.isEmpty()
-                                        ? "" : ", " + argListString);
+                                    ? "" : ", " + argListString);
                         }
 
                         b.addMethod(builder.build());
@@ -550,37 +571,42 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                     });
 
                     Stream.concat(staticMethodDefs.stream(), instanceMethodDefs.stream()).forEach(md -> {
-                        MethodSpec.Builder builder = MethodSpec.methodBuilder(md.getName())
-                                .addModifiers(reflectModsToProcessorMods(md.getModifiers()))
-                                .returns(md.getReturnType());
+                        if (isClassDecorator || annotatedMethods.contains(md)) {
+                            MethodSpec.Builder builder = MethodSpec.methodBuilder(md.getName())
+                                    .addModifiers(reflectModsToProcessorMods(md.getModifiers()))
+                                    .addAnnotation(decoratedSpec)
+                                    .returns(md.getReturnType());
 
-                        for (int i = 0; i < md.getArgTypes().length; i++) {
-                            Class<?> param = md.getArgTypes()[i];
-                            builder.addParameter(ParameterSpec.builder(param, "arg" + i).build());
+                            for (int i = 0; i < md.getArgTypes().length; i++) {
+                                Class<?> param = md.getArgTypes()[i];
+                                builder.addParameter(ParameterSpec.builder(param, "arg" + i).build());
+                            }
+
+                            boolean isStatic = java.lang.reflect.Modifier.isStatic(md.getModifiers());
+                            int argLen = md.getArgTypes().length;
+                            String stmt = String.format("__%1$s_FIELD_PROXY__, __%1$s__METHOD_PROXY__, " +
+                                            "__%1$s__METHOD_PROXY__",
+                                    isStatic ? "STATIC" : "INSTANCE");
+                            String temp = md.getReturnType().equals(void.class) ? "" : "return ";
+
+                            builder.addStatement(temp + "__DRIVER__.methodWrap($L.getBinding($T.from($S, new " +
+                                            "Class[]{$L})$L);",
+                                    stmt, MethodIdentifier.class, md.getName(),
+                                    Arrays.stream(md.getArgTypes()).map(c -> c.getCanonicalName() + ".class")
+                                            .collect(Collectors.joining(",")),
+                                    argLen == 0 ? "" : "," + IntStream.range(0, argLen).mapToObj(i -> "arg" + i)
+                                            .collect(Collectors.joining(",")));
+
+                            for (AnnotationDefinition ad : md.getAnnotations()) {
+                                AnnotationSpec.Builder aBuilder = AnnotationSpec.builder(ad.getAnnotation());
+                                ad.getBindings().forEach((k, v) -> {
+                                    aBuilder.addMember(k, "$L", AnnotationDefinition.toAnnotationLiteral(v));
+                                });
+                                builder.addAnnotation(aBuilder.build());
+                            }
+
+                            b.addMethod(builder.build());
                         }
-
-                        boolean isStatic = java.lang.reflect.Modifier.isStatic(md.getModifiers());
-                        int argLen = md.getArgTypes().length;
-                        String stmt = String.format("__%1$s_FIELD_PROXY__, __%1$s__METHOD_PROXY__, __%1$s__METHOD_PROXY__",
-                                isStatic ? "STATIC" : "INSTANCE");
-                        String temp = md.getReturnType().equals(void.class) ? "" : "return ";
-
-                        builder.addStatement(temp + "__DRIVER__.methodWrap($L.getBinding($T.from($S, new Class[]{$L})$L);",
-                                stmt, MethodIdentifier.class, md.getName(),
-                                Arrays.stream(md.getArgTypes()).map(c -> c.getCanonicalName() + ".class")
-                                        .collect(Collectors.joining(",")),
-                                argLen == 0 ? "" : "," + IntStream.range(0, argLen).mapToObj(i -> "arg" + i)
-                                        .collect(Collectors.joining(",")));
-
-                        for (AnnotationDefinition ad : md.getAnnotations()) {
-                            AnnotationSpec.Builder aBuilder = AnnotationSpec.builder(ad.getAnnotation());
-                            ad.getBindings().forEach((k, v) -> {
-                                aBuilder.addMember(k, "$L", AnnotationDefinition.toAnnotationLiteral(v));
-                            });
-                            builder.addAnnotation(aBuilder.build());
-                        }
-
-                        b.addMethod(builder.build());
                     });
 
                     index.index(qn, newPkg + "." + newName);
@@ -588,7 +614,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                     return b.build();
                 });
             }
-        });
+        }
 
         try {
             batch.publish(getFiler());
