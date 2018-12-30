@@ -6,6 +6,8 @@ import plasma.blackhole.api.MethodDecoratorDriver;
 import plasma.blackhole.api.annotations.ClassDecorator;
 import plasma.blackhole.api.annotations.MethodDecorator;
 import plasma.blackhole.util.*;
+import plasma.blackhole.util.internal.ClassUtils;
+import plasma.blackhole.util.internal.ResourceUtils;
 
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;

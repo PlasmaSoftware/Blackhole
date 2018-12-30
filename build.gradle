@@ -5,6 +5,9 @@ plugins {
     id "com.jfrog.bintray" version "1.8.0"
 }
 
+apply plugin: 'java-library'
+apply from: 'jdks.gradle'
+
 ext {
     ver = '1.0.0'
     pkg = 'plasma.blackhole'
@@ -13,13 +16,21 @@ ext {
 group pkg
 version ver
 
-sourceCompatibility = 1.8
-
 repositories {
     jcenter()
 }
 
+sourceSets {
+    java9 {
+        java {
+            srcDirs = ['src/main/java9']
+        }
+    }
+}
+
 dependencies {
+    java9Implementation files(sourceSets.main.output.classesDirs) { builtBy compileJava }
+
     compile 'com.squareup:javapoet:1.11.1'
 //    compile 'de.ruedigermoeller:fst:2.57'
     compile 'com.google.code.findbugs:jsr305:3.0.2'
@@ -32,6 +43,25 @@ dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.12'
     testCompile 'com.google.testing.compile:compile-testing:0.15'
     testCompile 'com.google.truth:truth:0.42'
+}
+
+compileJava {
+    sourceCompatibility = 8
+    targetCompatibility = 8
+}
+
+compileJava9Java {
+    sourceCompatibility = 9
+    targetCompatibility = 9
+}
+
+jar {
+    into('META-INF/versions/9') {
+        from sourceSets.java9.output
+    }
+    manifest.attributes(
+            'Multi-Release': 'true'
+    )
 }
 
 task sourcesJar(type: Jar, dependsOn: classes) {
@@ -51,12 +81,6 @@ javadoc {
 artifacts {
     archives sourcesJar
     archives javadocJar
-}
-
-bintray {
-    user = System.getenv('BINTRAY_USER')
-    key = System.getenv('BINTRAY_KEY')
-    publications = ['MyPublication']
 }
 
 publishing {

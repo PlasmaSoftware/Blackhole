@@ -1,5 +1,7 @@
 package plasma.blackhole.util;
 
+import plasma.blackhole.util.internal.ClassUtils;
+
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;

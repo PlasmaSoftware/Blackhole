@@ -1,7 +1,7 @@
 package plasma.blackhole.processor;
 
 import plasma.blackhole.api.annotations.RequireNoArgConstructor;
-import plasma.blackhole.util.ThrowableUtils;
+import plasma.blackhole.util.internal.ThrowableUtils;
 
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;

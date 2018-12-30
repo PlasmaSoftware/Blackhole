@@ -5,6 +5,7 @@ import plasma.blackhole.api.ClassDecoratorDriver;
 import plasma.blackhole.api.MethodDecoratorDriver;
 import plasma.blackhole.api.annotations.Decorated;
 import plasma.blackhole.util.*;
+import plasma.blackhole.util.internal.ResourceUtils;
 
 import javax.annotation.Generated;
 import javax.annotation.processing.RoundEnvironment;
@@ -463,7 +464,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
 
                     //Proxy methods and bootstrap
                     b.addField(FieldSpec
-                            .builder(TypeName.get(FieldProxy.class), "__STATIC_METHOD_PROXY__",
+                            .builder(TypeName.get(MethodProxy.class), "__STATIC_METHOD_PROXY__",
                                     Modifier.FINAL, Modifier.STATIC, Modifier.PRIVATE)
                             .initializer(CodeBlock.of("new $T();", MethodProxy.class))
                             .build());
@@ -477,12 +478,10 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                         .map(p -> p.getCanonicalName() + ".class")
                                         .collect(Collectors.toList());
                                 staticMethodBindings.add(
-                                        CodeBlock.of("__STATIC_METHOD_PROXY__.bind($T.from($S, new Class[]{$L}), new " +
+                                        CodeBlock.of("__STATIC_METHOD_PROXY__.bind($S, new " +
                                                         "$T(" +
                                                         "$S, $L, $T.class, new Class[]{$L}, $L));",
-                                                MethodIdentifier.class,
                                                 name,
-                                                String.join(", ", args),
                                                 MethodBinding.class,
                                                 name,
                                                 m.getModifiers(),
@@ -492,11 +491,46 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                             });
                     b.addStaticBlock(CodeBlock.join(staticMethodBindings, "\n"));
 
+                    //TODO: wire
+                    b.addField(FieldSpec
+                            .builder(TypeName.get(ConstructorProxy.class), "__CONSTRUCTOR_PROXY__",
+                                    Modifier.FINAL, Modifier.STATIC, Modifier.PRIVATE)
+                            .initializer(CodeBlock.of("new $T();", ConstructorProxy.class))
+                            .build());
+
+                    List<CodeBlock> constructorBindings = new ArrayList<>();
+                    constructors.forEach(ee -> {
+                        List<String> args = ee.getParameters()
+                                .stream()
+                                .map(p -> toClass(p).getCanonicalName() + ".class")
+                                .collect(Collectors.toList());
+                        List<String> argStringTemp = new ArrayList<>();
+                        for (int i = 0; i < ee.getParameters().size(); i++) {
+                            argStringTemp.add("("
+                                    + toClass(ee.getParameters().get(i)).getCanonicalName()
+                                    + ") args[" + i + "]");
+                        }
+                        String argStr = "(" + String.join(", ", argStringTemp) + ")";
+                        constructorBindings.add(
+                            CodeBlock.of("__CONSTRUCTOR_PROXY__.bind(new " +
+                                            "$T(" +
+                                            "$S, $L, $T.class, new Class[]{$L}, (args) -> new $T($L)));",
+                                    MethodBinding.class,
+                                    "<init>",
+                                    java.lang.reflect.Modifier.PUBLIC,
+                                    toClass(te.asType()),
+                                    String.join(", ", args),
+                                    toClass(te.asType()),
+                                    argStr));
+                    });
+                    b.addStaticBlock(CodeBlock.join(constructorBindings, "\n"));
+
                     b.addField(FieldSpec
                             .builder(TypeName.get(FieldProxy.class), "__INSTANCE_METHOD_PROXY__",
                                     Modifier.FINAL, Modifier.PRIVATE)
                             .initializer(CodeBlock.of("new $T(__STATIC_METHOD_PROXY__);", FieldProxy.class))
                             .build());
+
 
                     List<CodeBlock> instanceMethodBindings = new ArrayList<>();
                     instanceMethodDefs.stream()
@@ -507,12 +541,10 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                         .map(p -> p.getCanonicalName() + ".class")
                                         .collect(Collectors.toList());
                                 instanceMethodBindings.add(
-                                        CodeBlock.of("__INSTANCE_METHOD_PROXY__.bind($T.from($S, new Class[]{$L}), " +
+                                        CodeBlock.of("__INSTANCE_METHOD_PROXY__.bind($S, " +
                                                         "new $T(" +
                                                         "$S, $L, $T.class, new Class[]{$L}, $L));",
-                                                MethodIdentifier.class,
                                                 name,
-                                                String.join(", ", args),
                                                 MethodBinding.class,
                                                 name,
                                                 m.getModifiers(),

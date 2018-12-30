@@ -1,4 +1,4 @@
-package plasma.blackhole.util;
+package plasma.blackhole.util.internal;
 
 import java.io.BufferedReader;
 import java.io.IOException;

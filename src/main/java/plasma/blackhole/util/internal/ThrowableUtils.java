@@ -1,4 +1,4 @@
-package plasma.blackhole.util;
+package plasma.blackhole.util.internal;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;

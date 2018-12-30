@@ -4,6 +4,10 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Objects;
 
+/**
+ * @deprecated Not entirely sure if this is useful anymore.
+ */
+@Deprecated
 public class MethodIdentifier {
 
     private final String name;

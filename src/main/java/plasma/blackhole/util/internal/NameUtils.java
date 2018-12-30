@@ -1,4 +1,4 @@
-package plasma.blackhole.util;
+package plasma.blackhole.util.internal;
 
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
