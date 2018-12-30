@@ -6,8 +6,6 @@ import plasma.blackhole.api.annotations.RunTimeOnly;
 import plasma.blackhole.processor.JavaFileBatch;
 import plasma.blackhole.util.*;
 
-//TODO hook in
-
 @RequireNoArgConstructor //@Inherited annotations are not detected from interface implementations
 public abstract class MethodDecoratorDriver implements DecoratorDriver {
 
@@ -27,11 +25,12 @@ public abstract class MethodDecoratorDriver implements DecoratorDriver {
 
     @Override
     @RunTimeOnly
-    public abstract void runtimeInit(Class<?> clazz, FieldProxy proxy);
+    public abstract void runtimeInit(AnnotationDefinition decorator, Class<?> clazz, FieldProxy proxy);
 
     // Total wrap
 
     @Override
     @RunTimeOnly
-    public abstract Object methodWrap(Class<?> clazz, FieldProxy fieldProxy, MethodProxy methodProxy, MethodBinding original, Object... args);
+    public abstract Object methodWrap(AnnotationDefinition decorator, Class<?> clazz, FieldProxy fieldProxy,
+                                      MethodProxy methodProxy, MethodBinding original, Object... args);
 }

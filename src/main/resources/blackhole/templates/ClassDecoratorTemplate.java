@@ -8,5 +8,5 @@ import java.lang.annotation.*;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.${retention})
 public @interface ${name} {
-
+    ${annotation_body}
 }

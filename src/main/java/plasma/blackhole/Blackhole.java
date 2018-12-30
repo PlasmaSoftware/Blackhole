@@ -91,4 +91,6 @@ public class Blackhole {
             }
         };
     }
+
+    //TODO: Runtime proxying to decorated impls?
 }

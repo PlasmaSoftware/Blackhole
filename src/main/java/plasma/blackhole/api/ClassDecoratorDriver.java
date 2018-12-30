@@ -33,14 +33,16 @@ public abstract class ClassDecoratorDriver implements DecoratorDriver {
 
     @Override
     @RunTimeOnly
-    public abstract void runtimeInit(Class<?> clazz, FieldProxy proxy);
+    public abstract void runtimeInit(AnnotationDefinition decorator, Class<?> clazz, FieldProxy proxy);
 
     @RunTimeOnly
-    public abstract void init(Class<?> clazz, FieldProxy fieldProxy, MethodProxy methodProxy, Object... args);
+    public abstract void init(AnnotationDefinition decorator, Class<?> clazz, FieldProxy fieldProxy,
+                              MethodProxy methodProxy, Object... args);
 
     // Total wrap
 
     @Override
     @RunTimeOnly
-    public abstract Object methodWrap(Class<?> clazz, FieldProxy fieldProxy, MethodProxy methodProxy, MethodBinding original, Object... args);
+    public abstract Object methodWrap(AnnotationDefinition decorator, Class<?> clazz, FieldProxy fieldProxy,
+                                      MethodProxy methodProxy, MethodBinding original, Object... args);
 }

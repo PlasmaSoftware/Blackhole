@@ -43,6 +43,15 @@ public class DecoratorAnnotationProcessor extends AbstractBlackholeAnnotationPro
         return changed;
     }
 
+    private String getBody(DecoratorSpec.AnnotationProperty property) {
+        String base = property.getType().getCanonicalName() + " " + property.getName() + "()";
+        if (property.getDefault() == null) {
+            return base + ";";
+        } else {
+            return base + " default " + AnnotationDefinition.toAnnotationLiteral(property.getDefault()) + ";";
+        }
+    }
+
     private boolean handleClassDecorators(JavaFileBatch batch, Set<? extends Element> elements) {
         String processorTemplate = ResourceUtils.readFile("blackhole/templates/ClassDecoratorProcessorTemplate.java");
         String annotationTemplate = ResourceUtils.readFile("blackhole/templates/ClassDecoratorTemplate.java");
@@ -60,7 +69,9 @@ public class DecoratorAnnotationProcessor extends AbstractBlackholeAnnotationPro
                 String newAnnotation = TemplateEngine.bind(annotationTemplate,
                         "package", spec.getPackage(),
                         "name", spec.getName(),
-                        "retention", spec.retentionPolicy().name());
+                        "retention", spec.retentionPolicy().name(),
+                        "annotation_body", Arrays.stream(spec.getProperties()).map(this::getBody)
+                                .collect(Collectors.joining("\n")));
 
                 batch.rawSource(spec.getPackage(), spec.getName(), newAnnotation);
 
@@ -104,7 +115,9 @@ public class DecoratorAnnotationProcessor extends AbstractBlackholeAnnotationPro
                 String newAnnotation = TemplateEngine.bind(annotationTemplate,
                         "package", spec.getPackage(),
                         "name", spec.getName(),
-                        "retention", spec.retentionPolicy().name());
+                        "retention", spec.retentionPolicy().name(),
+                        "annotation_body", Arrays.stream(spec.getProperties()).map(this::getBody)
+                                .collect(Collectors.joining("\n")));
 
                 batch.rawSource(spec.getPackage(), spec.getName(), newAnnotation);
 

@@ -31,7 +31,7 @@ public class AnnotationDefinition {
         return bindings;
     }
 
-    AnnotationDefinition(Annotation annotation) {
+    public AnnotationDefinition(Annotation annotation) {
         this(annotation.annotationType(), makeBindings(annotation));
     }
 
