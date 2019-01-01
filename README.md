@@ -29,4 +29,8 @@ use of too many not-yet-compiled classes can lead to compilation speed degradati
 * Blackhole's technique does not modify the original class. This can lead to potential unintended side effects
 
 ## TODO
-
+1) Decouple internals into a separate module from the abstraction
+2) Add alternative implementations (compiler tree modification like lombok, runtime bytecode modification, etc)
+3) Clean up processor backend code
+4) Documentation
+5) Nullability annotations
