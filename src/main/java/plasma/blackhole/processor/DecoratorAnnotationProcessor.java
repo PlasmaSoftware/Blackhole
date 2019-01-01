@@ -1,8 +1,8 @@
 package plasma.blackhole.processor;
 
 import com.austinv11.servicer.WireService;
-import plasma.blackhole.api.ClassDecoratorDriver;
-import plasma.blackhole.api.MethodDecoratorDriver;
+import plasma.blackhole.api.CompileTimeHook;
+import plasma.blackhole.api.NoOpCompileTimeHook;
 import plasma.blackhole.api.annotations.ClassDecorator;
 import plasma.blackhole.api.annotations.MethodDecorator;
 import plasma.blackhole.util.*;
@@ -13,8 +13,11 @@ import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.TypeMirror;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Target;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -31,65 +34,65 @@ public class DecoratorAnnotationProcessor extends AbstractBlackholeAnnotationPro
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-        JavaFileBatch batch = new JavaFileBatch();
-        boolean changed = handleClassDecorators(batch, roundEnv.getElementsAnnotatedWith(ClassDecorator.class));
-        changed = changed || handleMethodDecorators(batch, roundEnv.getElementsAnnotatedWith(MethodDecorator.class));
         try {
-            batch.publish(getFiler());
-        } catch (IOException e) {
-            error(e);
-            return false;
+            JavaFileBatch batch = new JavaFileBatch();
+            boolean changed = handleClassDecorators(roundEnv, batch, roundEnv.getElementsAnnotatedWith(ClassDecorator.class));
+            changed = changed || handleMethodDecorators(roundEnv, batch, roundEnv.getElementsAnnotatedWith(MethodDecorator.class));
+            try {
+                batch.publish(getFiler());
+            } catch (IOException e) {
+                error(e);
+                return false;
+            }
+            return changed;
+        } catch (Throwable t) {
+            error(t);
         }
-        return changed;
+        return false;
     }
 
-    private String getBody(DecoratorSpec.AnnotationProperty property) {
-        String base = property.getType().getCanonicalName() + " " + property.getName() + "()";
-        if (property.getDefault() == null) {
-            return base + ";";
-        } else {
-            return base + " default " + AnnotationDefinition.toAnnotationLiteral(property.getDefault()) + ";";
-        }
-    }
-
-    private boolean handleClassDecorators(JavaFileBatch batch, Set<? extends Element> elements) {
-        String processorTemplate = ResourceUtils.readFile("blackhole/templates/ClassDecoratorProcessorTemplate.java");
-        String annotationTemplate = ResourceUtils.readFile("blackhole/templates/ClassDecoratorTemplate.java");
+    private boolean handleClassDecorators(RoundEnvironment roundEnv, JavaFileBatch batch, Set<? extends Element> elements) {
+        String processorTemplate = ResourceUtils.readFileOrEmpty("blackhole/templates/DecoratorProcessorTemplate.java");
 
         elements.forEach(element -> {
             try {
+                Target t = element.getAnnotation(Target.class);
+                if (t == null || t.value().length > 2 || t.value().length == 0
+                        || !Arrays.stream(t.value()).allMatch(e -> e == ElementType.TYPE || e == ElementType.METHOD))
+                    throw new AssertionError("Decorators must only have TYPE and/or METHOD targets set!");
+
                 ClassDecorator decorator = element.getAnnotation(ClassDecorator.class);
-                ClassDecoratorDriver driver = ClassUtils.instantiate(decorator.driver());
-                info("Identified Class Decorator", driver);
+                TypeMirror compileDriver = annotationHack(decorator::onCompile);
+                CompileTimeHook hook = ((TypeElement) getTypeUtils().asElement(compileDriver))
+                        .getQualifiedName().contentEquals(NoOpCompileTimeHook.class.getCanonicalName())
+                        ? new NoOpCompileTimeHook()
+                        : ClassUtils.instantiate(mirroredTypeWorkaround(roundEnv, decorator::onCompile));
+                TypeMirror driver = annotationHack(decorator::value);
+                String fqn = ((TypeElement) getTypeUtils().asElement(driver)).getQualifiedName().toString();
+                info("Identified Class Decorator", fqn);
 
-                driver.compileInit(batch);
+                hook.compileInit(batch);
 
-                DecoratorSpec spec = driver.decoratorSpec();
-
-                String newAnnotation = TemplateEngine.bind(annotationTemplate,
-                        "package", spec.getPackage(),
-                        "name", spec.getName(),
-                        "retention", spec.retentionPolicy().name(),
-                        "annotation_body", Arrays.stream(spec.getProperties()).map(this::getBody)
-                                .collect(Collectors.joining("\n")));
-
-                batch.rawSource(spec.getPackage(), spec.getName(), newAnnotation);
-
-                String processorName = spec.getName() + "$$AnnotationProcessor";
+                String pkg = fqn.substring(0, fqn.lastIndexOf('.'));
+                String name = fqn.substring(fqn.lastIndexOf('.')+1);
+                String processorName = name + "$$AnnotationProcessor";
                 String newProcessor = TemplateEngine.bind(processorTemplate,
-                        "package", spec.getPackage(),
+                        "package", pkg,
                         "name", processorName,
-                        "annotation", spec.getPackage() + "." + spec.getName(),
-                        "driver_package", driver.getClass().getPackage().getName(),
-                        "driver", driver.getClass().getTypeName(),
-                        "interfaces", Arrays.stream(driver.implementInterfaces())
+                        "annotation", decorator.getClass().getCanonicalName(),
+                        "driver_package", pkg,
+                        "driver", name,
+                        "target", "TYPE",
+                        "class_driver", name + ".class",
+                        "method_driver", "null",
+                        "interfaces", Arrays.stream(hook.implementInterfaces())
                                 .map(s -> "\"" + s + "\"").collect(Collectors.joining(",")),
-                        "fields", Arrays.stream(driver.addFields())
+                        "fields", Arrays.stream(hook.addFields())
                                 .map(FieldDefinition::builderCode).collect(Collectors.joining(",")),
-                        "methods", Arrays.stream(driver.addMethods())
+                        "methods", Arrays.stream(hook.addMethods())
                                 .map(MethodDefinition::builderCode).collect(Collectors.joining(",")));
 
-                batch.rawSource(spec.getPackage(), processorName, newProcessor);
+                batch.rawSource(pkg, processorName, newProcessor);
             } catch (Exception e) {
                 error("Exception caught handling class decorators!", e);
                 warning("Attempting to continue...");
@@ -98,40 +101,48 @@ public class DecoratorAnnotationProcessor extends AbstractBlackholeAnnotationPro
         return !elements.isEmpty();
     }
 
-    private boolean handleMethodDecorators(JavaFileBatch batch, Set<? extends Element> elements) {
-        String processorTemplate = ResourceUtils.readFile("blackhole/templates/MethodDecoratorProcessorTemplate.java");
-        String annotationTemplate = ResourceUtils.readFile("blackhole/templates/MethodDecoratorTemplate.java");
+    private boolean handleMethodDecorators(RoundEnvironment roundEnv, JavaFileBatch batch, Set<? extends Element> elements) {
+        String processorTemplate = ResourceUtils.readFileOrEmpty("blackhole/templates/DecoratorProcessorTemplate.java");
 
         elements.forEach(element -> {
             try {
+                Target t = element.getAnnotation(Target.class);
+                if (t == null || t.value().length > 2 || t.value().length == 0
+                        || !Arrays.stream(t.value()).allMatch(e -> e == ElementType.TYPE || e == ElementType.METHOD))
+                    throw new AssertionError("Decorators must only have TYPE and/or METHOD targets set!");
+
                 MethodDecorator decorator = element.getAnnotation(MethodDecorator.class);
-                MethodDecoratorDriver driver = ClassUtils.instantiate(decorator.driver());
-                info("Identified Method Decorator", driver);
+                TypeMirror compileDriver = annotationHack(decorator::onCompile);
+                CompileTimeHook hook = ((TypeElement) getTypeUtils().asElement(compileDriver))
+                        .getQualifiedName().contentEquals(NoOpCompileTimeHook.class.getCanonicalName())
+                        ? new NoOpCompileTimeHook()
+                        : ClassUtils.instantiate(mirroredTypeWorkaround(roundEnv, decorator::onCompile));
+                TypeMirror driver = annotationHack(decorator::value);
+                String fqn = ((TypeElement) getTypeUtils().asElement(driver)).getQualifiedName().toString();
+                info("Identified Method Decorator", fqn);
 
-                driver.compileInit(batch);
+                hook.compileInit(batch);
 
-                DecoratorSpec spec = driver.decoratorSpec();
-
-                String newAnnotation = TemplateEngine.bind(annotationTemplate,
-                        "package", spec.getPackage(),
-                        "name", spec.getName(),
-                        "retention", spec.retentionPolicy().name(),
-                        "annotation_body", Arrays.stream(spec.getProperties()).map(this::getBody)
-                                .collect(Collectors.joining("\n")));
-
-                batch.rawSource(spec.getPackage(), spec.getName(), newAnnotation);
-
-                String processorName = spec.getName() + "$$AnnotationProcessor";
+                String pkg = fqn.substring(0, fqn.lastIndexOf('.'));
+                String name = fqn.substring(fqn.lastIndexOf('.')+1);
+                String processorName = name + "$$AnnotationProcessor";
                 String newProcessor = TemplateEngine.bind(processorTemplate,
-                        "package", spec.getPackage(),
+                        "package", pkg,
                         "name", processorName,
-                        "annotation", spec.getPackage() + "." + spec.getName(),
-                        "driver_package", driver.getClass().getPackage().getName(),
-                        "driver", driver.getClass().getTypeName(),
-                        "fields", Arrays.stream(driver.addFields())
-                                .map(FieldDefinition::builderCode).collect(Collectors.joining(",")));
+                        "annotation", decorator.getClass().getCanonicalName(),
+                        "driver_package", pkg,
+                        "driver", name,
+                        "target", "METHOD",
+                        "class_driver", "null",
+                        "method_driver", name + ".class",
+                        "interfaces", Arrays.stream(hook.implementInterfaces())
+                                .map(s -> "\"" + s + "\"").collect(Collectors.joining(",")),
+                        "fields", Arrays.stream(hook.addFields())
+                                .map(FieldDefinition::builderCode).collect(Collectors.joining(",")),
+                        "methods", Arrays.stream(hook.addMethods())
+                                .map(MethodDefinition::builderCode).collect(Collectors.joining(",")));
 
-                batch.rawSource(spec.getPackage(), processorName, newProcessor);
+                batch.rawSource(pkg, processorName, newProcessor);
             } catch (Exception e) {
                 error("Exception caught handling method decorators!", e);
                 warning("Attempting to continue...");

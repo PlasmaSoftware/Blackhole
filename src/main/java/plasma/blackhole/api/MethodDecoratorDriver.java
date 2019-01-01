@@ -1,27 +1,13 @@
 package plasma.blackhole.api;
 
-import plasma.blackhole.api.annotations.CompileTimeOnly;
 import plasma.blackhole.api.annotations.RequireNoArgConstructor;
 import plasma.blackhole.api.annotations.RunTimeOnly;
-import plasma.blackhole.processor.JavaFileBatch;
 import plasma.blackhole.util.*;
 
 @RequireNoArgConstructor //@Inherited annotations are not detected from interface implementations
 public abstract class MethodDecoratorDriver implements DecoratorDriver {
 
-    MethodDecoratorDriver() {}
-
-    @Override
-    @CompileTimeOnly
-    public abstract void compileInit(JavaFileBatch jfb);
-
-    @Override
-    @CompileTimeOnly
-    public abstract DecoratorSpec decoratorSpec();
-
-    @Override
-    @CompileTimeOnly
-    public abstract FieldDefinition[] addFields();
+    public MethodDecoratorDriver() {}
 
     @Override
     @RunTimeOnly

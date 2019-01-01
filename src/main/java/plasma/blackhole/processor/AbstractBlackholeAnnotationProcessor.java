@@ -1,6 +1,8 @@
 package plasma.blackhole.processor;
 
 import plasma.blackhole.api.annotations.RequireNoArgConstructor;
+import plasma.blackhole.util.internal.CompilerUtils;
+import plasma.blackhole.util.internal.ResourceUtils;
 import plasma.blackhole.util.internal.ThrowableUtils;
 
 import javax.annotation.processing.*;
@@ -9,12 +11,17 @@ import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.MirroredTypeException;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic.Kind;
+import javax.tools.StandardLocation;
 import java.lang.annotation.Annotation;
 import java.util.Arrays;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 //@WireService(Processor.class)
@@ -59,6 +66,23 @@ public abstract class AbstractBlackholeAnnotationProcessor extends AbstractProce
     @Override
     public Iterable<? extends Completion> getCompletions(Element element, AnnotationMirror annotation, ExecutableElement member, String userText) {
         return super.getCompletions(element, annotation, member, userText);
+    }
+
+    public <T> Class<T> mirroredTypeWorkaround(RoundEnvironment roundEnv, Supplier<Class<T>> dummy) {
+        try {
+            return dummy.get();
+        } catch (MirroredTypeException e) {
+            return CompilerUtils.compile(roundEnv, getFiler(), getTypeUtils(), e.getTypeMirror()); //I know, this is very gross
+        }
+    }
+
+    public TypeMirror annotationHack(Supplier<Class<?>> dummy) {
+        try {
+            dummy.get();
+            throw new AssertionError();
+        } catch (MirroredTypeException e) {
+            return e.getTypeMirror();
+        }
     }
 
     public Types getTypeUtils() {

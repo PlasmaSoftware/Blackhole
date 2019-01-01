@@ -1,6 +1,8 @@
 package plasma.blackhole.api.annotations;
 
+import plasma.blackhole.api.CompileTimeHook;
 import plasma.blackhole.api.MethodDecoratorDriver;
+import plasma.blackhole.api.NoOpCompileTimeHook;
 
 import java.lang.annotation.*;
 
@@ -9,5 +11,7 @@ import java.lang.annotation.*;
 @Documented
 public @interface MethodDecorator {
 
-    Class<? extends MethodDecoratorDriver> driver();
+    Class<? extends MethodDecoratorDriver> value();
+
+    Class<? extends CompileTimeHook> onCompile() default NoOpCompileTimeHook.class;
 }
