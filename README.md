@@ -10,7 +10,7 @@ overhead as much as possible.
 ## How it works
 First, create a decorator driver. These must either extend `ClassDecoratorDriver` or `MethodDecoratorDriver` 
 (and optionally, a compile-time hook extending the `CompileTimeHook` class). Next, create your annotation.
-These can only be used to annotated classes or methods and they must be annotated with either `@ClassDecorator`
+These can only be used to annotate classes or methods and they must be annotated with either `@ClassDecorator`
 or `@MethodDecorator` (depending on the driver type you've implemented). 
 
 Now, on compilation, the Blackhole annotation processor will scan for decorators and, if found, generates
@@ -25,7 +25,7 @@ internal registry. Now, to access the decorated class you just use either `Black
 * Annotation processing can slow down the compilation process.
 * Annotation processing prevents the direct access of your classes by our processors so Blackhole employs a
 primitive java compiler to bootstrap an instance into the classpath in order to call it. This means that the
-use of too many not-yet-compiled classes can lead to compilation speed degradation or simple compilation errors.
+use of too many not-yet-compiled classes in your `CompileTimeHook`s can lead to compilation speed degradation or simple compilation errors.
 * Blackhole's technique does not modify the original class. This can lead to potential unintended side effects
 
 ## TODO
