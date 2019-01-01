@@ -17,7 +17,7 @@ repositories {
 ...
 dependencies {
   ...
-  compile 'com.github.PlasmaSoftware:Blackhole:VERSION'
+  compile 'com.github.PlasmaSoftware:Blackhole:VERSION_OR_COMMIT'
   annotationProcessor 'com.github.PlasmaSoftware:Blackhole:VERSION_OR_COMMIT'
 }
 ```
