@@ -7,6 +7,38 @@ but for Java. This framework allows users to define annotations which can be use
 classes and methods. It takes advantage of annotation processing at compile-time in order to reduce runtime
 overhead as much as possible.
 
+## Installation
+Gradle:
+```groovy
+repositories {
+  ...
+  maven { url 'https://jitpack.io' }
+}
+...
+dependencies {
+  ...
+  compile 'com.github.PlasmaSoftware:Blackhole:VERSION'
+  annotationProcessor 'com.github.PlasmaSoftware:Blackhole:VERSION_OR_COMMIT'
+}
+```
+
+Maven:
+```xml
+<repositories>
+  ...
+  <repository>
+      <id>jitpack.io</id>
+      <url>https://jitpack.io</url>
+  </repository>
+</repositories>
+...
+<dependency>
+    <groupId>com.github.PlasmaSoftware</groupId>
+    <artifactId>Blackhole</artifactId>
+    <version>VERSION_OR_COMMIT</version>
+</dependency>
+```
+
 ## How it works
 First, create a decorator driver. These must either extend `ClassDecoratorDriver` or `MethodDecoratorDriver` 
 (and optionally, a compile-time hook extending the `CompileTimeHook` class). Next, create your annotation.
