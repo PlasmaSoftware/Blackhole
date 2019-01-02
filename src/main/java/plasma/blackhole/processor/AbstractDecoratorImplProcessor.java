@@ -658,7 +658,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
             try {
                 batch.publish(getFiler());
                 index.export(getFiler()
-                        .getResource(StandardLocation.CLASS_OUTPUT, "", "blackhole/decorated.idx")
+                        .createResource(StandardLocation.CLASS_OUTPUT, "", "blackhole/decorated.idx")
                         .openOutputStream());
             } catch (IOException e) {
                 error("Exception caught running generated decorator processor!", e);
