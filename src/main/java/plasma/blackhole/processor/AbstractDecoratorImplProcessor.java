@@ -267,6 +267,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
         File file = new File(finalPath);
         if (!file.exists()) {
             error(finalPath);
+            file.getParentFile().mkdirs();
             file.createNewFile();
         }
         return new FileOutputStream(file);
