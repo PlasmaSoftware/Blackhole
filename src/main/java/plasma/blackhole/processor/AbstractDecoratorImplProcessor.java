@@ -263,8 +263,10 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
     private OutputStream hackStream(JavaFileManager.Location location, String path) throws IOException {
         String finalPath = getFiler().getResource(location, "", path).toUri().getPath();
         File file = new File(finalPath);
-        if (!file.exists())
+        if (!file.exists()) {
+            error(finalPath);
             file.createNewFile();
+        }
         return new FileOutputStream(file);
     }
 
