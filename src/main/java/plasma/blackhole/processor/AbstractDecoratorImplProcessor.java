@@ -285,20 +285,13 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                 .build())
                                 .addModifiers(Modifier.PUBLIC, Modifier.FINAL);
 
-                        Decorated decoratedAnnotation = te.getAnnotation(Decorated.class);
-                        if (decoratedAnnotation == null)
-                            decoratedAnnotation = new Decorated() {
-                                @Override
-                                public Class<? extends Annotation> annotationType() {
-                                    return Decorated.class;
-                                }
 
-                                @Override
-                                public Class<?> originalClass() {
-                                    return toClass(te.asType());
-                                }
-                            };
-                        AnnotationSpec decoratedSpec = AnnotationSpec.get(decoratedAnnotation);
+                        Decorated decoratedAnnotation = te.getAnnotation(Decorated.class);
+                        TypeMirror decoratedAnnotationType = decoratedAnnotation == null ? te.asType() : annotationHack(decoratedAnnotation::originalClass);
+                        AnnotationSpec decoratedSpec = AnnotationSpec.builder(Decorated.class)
+                                .addMember("originalClass",
+                                        "$T.class", ((TypeElement) getTypeUtils().asElement(decoratedAnnotationType)).getQualifiedName().toString())
+                                .build();
                         b.addAnnotation(decoratedSpec);
 
                         b.superclass(TypeName.get(te.asType()));
