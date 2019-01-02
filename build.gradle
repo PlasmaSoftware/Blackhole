@@ -39,7 +39,7 @@ dependencies {
 //    compile 'org.objenesis:objenesis:3.0.1'
 //    compile 'org.apache.commons:commons-collections4:4.2'
     compileOnly "javax.annotation:javax.annotation-api:1.2"
-    compileOnly 'com.austinv11.servicer:Servicer:1.0.0'
+    compile 'com.austinv11.servicer:Servicer:1.0.0'
 
     annotationProcessor 'com.austinv11.servicer:Servicer:1.0.0'
 
@@ -47,7 +47,7 @@ dependencies {
     testCompile 'com.google.testing.compile:compile-testing:0.15'
     testCompile 'com.google.truth:truth:0.42'
     testCompileOnly "javax.annotation:javax.annotation-api:1.2"
-    testCompileOnly 'com.austinv11.servicer:Servicer:1.0.0'
+    testCompile 'com.austinv11.servicer:Servicer:1.0.0'
 
     testAnnotationProcessor 'com.austinv11.servicer:Servicer:1.0.0'
 }
