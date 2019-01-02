@@ -290,7 +290,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                         TypeMirror decoratedAnnotationType = decoratedAnnotation == null ? te.asType() : annotationHack(decoratedAnnotation::originalClass);
                         AnnotationSpec decoratedSpec = AnnotationSpec.builder(Decorated.class)
                                 .addMember("originalClass",
-                                        "$T.class", ((TypeElement) getTypeUtils().asElement(decoratedAnnotationType)).getQualifiedName().toString())
+                                        "$L.class", ((TypeElement) getTypeUtils().asElement(decoratedAnnotationType)).getQualifiedName().toString())
                                 .build();
                         b.addAnnotation(decoratedSpec);
 
