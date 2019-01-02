@@ -73,6 +73,9 @@ public class DecoratorAnnotationProcessor extends AbstractBlackholeAnnotationPro
 
                 hook.compileInit(batch);
 
+                error(element);
+                error(((TypeElement) element).getQualifiedName());
+
                 String pkg = fqn.substring(0, fqn.lastIndexOf('.'));
                 String name = fqn.substring(fqn.lastIndexOf('.')+1);
                 String processorName = name + "$$AnnotationProcessor";
