@@ -5,6 +5,7 @@ import plasma.blackhole.api.ClassDecoratorDriver;
 import plasma.blackhole.api.MethodDecoratorDriver;
 import plasma.blackhole.api.annotations.Decorated;
 import plasma.blackhole.util.*;
+import plasma.blackhole.util.internal.ClassUtils;
 import plasma.blackhole.util.internal.ResourceUtils;
 
 import javax.annotation.Generated;
@@ -70,11 +71,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
     }
 
     private Class toClass(TypeMirror type) {
-        try {
-            return Class.forName(type.toString());
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException(e);
-        }
+        return ClassUtils.stringToClass(type.toString());
     }
 
     private Class toClass(VariableElement var) {

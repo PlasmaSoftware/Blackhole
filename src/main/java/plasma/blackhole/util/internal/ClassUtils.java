@@ -55,4 +55,33 @@ public final class ClassUtils {
             return false;
         }
     }
+
+    public static Class<?> stringToClass(String s) {
+        try {
+            return Class.forName(s);
+        } catch (Exception e) {
+            switch (s) {
+                case "byte":
+                    return byte.class;
+                case "boolean":
+                    return boolean.class;
+                case "char":
+                    return char.class;
+                case "short":
+                    return short.class;
+                case "int":
+                    return int.class;
+                case "long":
+                    return long.class;
+                case "float":
+                    return float.class;
+                case "double":
+                    return double.class;
+                case "void":
+                    return void.class;
+                default:
+                    throw new RuntimeException(e);
+            }
+        }
+    }
 }
