@@ -49,23 +49,24 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
     private boolean claimType(TypeElement te) { //Used to force a single decorator per class in each round
         //TODO: Is this actually needed?
         //FIXME: use in-memory state somehow. Static fields?
-        try {
-            File tracker = new File("./blackhole_claims.tmp");
-            if (!tracker.exists()) {
-                if (!tracker.createNewFile())
-                    throw new IOException("Cannot create blackhole_claims.tmp file!");
-                tracker.deleteOnExit();
-            }
-            String name = te.getQualifiedName().toString();
-            if (!Files.readAllLines(tracker.toPath()).contains(name)) {
-                Files.write(tracker.toPath(), (name + "\n").getBytes(), StandardOpenOption.APPEND);
-                return true;
-            } else {
-                return false;
-            }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+//        try {
+//            File tracker = new File("./blackhole_claims.tmp");
+//            if (!tracker.exists()) {
+//                if (!tracker.createNewFile())
+//                    throw new IOException("Cannot create blackhole_claims.tmp file!");
+//                tracker.deleteOnExit();
+//            }
+//            String name = te.getQualifiedName().toString();
+//            if (!Files.readAllLines(tracker.toPath()).contains(name)) {
+//                Files.write(tracker.toPath(), (name + "\n").getBytes(), StandardOpenOption.APPEND);
+//                return true;
+//            } else {
+//                return false;
+//            }
+//        } catch (IOException e) {
+//            throw new RuntimeException(e);
+//        }
+        return true;
     }
 
     private Class toClass(TypeMirror type) {
