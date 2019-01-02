@@ -278,7 +278,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                     String newPkg = qn.substring(0, qn.lastIndexOf('.'));
                     batch.newClass(newPkg, newName, b -> {
                         b.addAnnotation(AnnotationSpec.builder(Generated.class)
-                                .addMember("value", pkg() + "." + name())
+                                .addMember("value", "$S", pkg() + "." + name())
                                 .build())
                                 .addModifiers(Modifier.PUBLIC, Modifier.FINAL);
 
