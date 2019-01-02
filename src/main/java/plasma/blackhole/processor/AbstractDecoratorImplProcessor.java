@@ -512,7 +512,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                         + toClass(ee.getParameters().get(i)).getCanonicalName()
                                         + ") args[" + i + "]");
                             }
-                            String argStr = "(" + String.join(", ", argStringTemp) + ")";
+                            String argStr = String.join(", ", argStringTemp);
                             constructorBindings.add(
                                     CodeBlock.of("__CONSTRUCTOR_PROXY__.bind(new " +
                                                     "$T(" +
