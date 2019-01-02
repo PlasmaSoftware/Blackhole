@@ -24,7 +24,7 @@ public class ${name} extends AbstractDecoratorImplProcessor {
 
     @Override
     public Class<? extends Annotation>[] annotations() {
-        return new Class[]{${annotation.class}};
+        return new Class[]{${annotation}.class};
     }
 
     @Override
