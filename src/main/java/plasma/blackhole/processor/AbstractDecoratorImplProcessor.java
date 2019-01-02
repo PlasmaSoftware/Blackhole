@@ -262,10 +262,11 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
 
     private OutputStream hackStream(JavaFileManager.Location location, String path) throws IOException {
         String finalPath = getFiler().getResource(location, "", path).toUri().getPath().substring(1);
-        if (finalPath.startsWith("/")) //Not sure why, but this occasionally occurs
+        if (finalPath.startsWith("/") || finalPath.startsWith("\\")) //Not sure why, but this occasionally occurs
             finalPath = finalPath.substring(1);
         File file = new File(finalPath);
         if (!file.exists()) {
+            error(finalPath);
             file.createNewFile();
         }
         return new FileOutputStream(file);
