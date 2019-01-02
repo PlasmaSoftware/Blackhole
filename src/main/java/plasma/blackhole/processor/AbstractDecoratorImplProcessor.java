@@ -288,9 +288,10 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
 
                         Decorated decoratedAnnotation = te.getAnnotation(Decorated.class);
                         TypeMirror decoratedAnnotationType = decoratedAnnotation == null ? te.asType() : annotationHack(decoratedAnnotation::originalClass);
+                        String originalClass = ((TypeElement) getTypeUtils().asElement(decoratedAnnotationType)).getQualifiedName().toString();
                         AnnotationSpec decoratedSpec = AnnotationSpec.builder(Decorated.class)
                                 .addMember("originalClass",
-                                        "$L.class", ((TypeElement) getTypeUtils().asElement(decoratedAnnotationType)).getQualifiedName().toString())
+                                        "$L.class", originalClass)
                                 .build();
                         b.addAnnotation(decoratedSpec);
 
@@ -310,7 +311,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                         b.addField(FieldSpec
                                 .builder(TypeName.get(Class.class), "__ORIGINAL_CLASS__",
                                         Modifier.FINAL, Modifier.STATIC, Modifier.PRIVATE)
-                                .initializer(CodeBlock.of("$T.class;", decoratedAnnotation))
+                                .initializer(CodeBlock.of("$T.class;", originalClass))
                                 .build());
 
                         b.addField(FieldSpec.builder(TypeName.get(annotation()), "__DECORATOR_INST__",
