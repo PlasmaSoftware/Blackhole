@@ -28,12 +28,12 @@ public class ${name} extends AbstractDecoratorImplProcessor {
     }
 
     @Override
-    public ClassDecoratorDriver classDriver() {
+    public Class<? extends ClassDecoratorDriver> classDriver() {
         return ${class_driver};
     }
 
     @Override
-    public MethodDecoratorDriver methodDriver() {
+    public Class<? extends MethodDecoratorDriver> methodDriver() {
         return ${method_driver};
     }
 
