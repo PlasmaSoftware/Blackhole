@@ -422,8 +422,10 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                     String name = v.getName();
                                     staticFieldBindings.add(
                                             CodeBlock.of(String.format("__STATIC_FIELD_PROXY__.bind($S, new $T(" +
-                                                            "$S, $L, $L, $T.class, %s, %s);",
+                                                            "$S, $L, $L, $L.class, %s, %s);",
                                                     makeGetterTemplate(v, false), makeSetterTemplate(v, false)),
+                                                    name,
+                                                    FieldBinding.class,
                                                     name,
                                                     true,
                                                     v.getModifiers(),
@@ -446,10 +448,12 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                     String name = v.getName();
                                     instanceFieldBindings.add(
                                             CodeBlock.of(String.format("__INSTANCE_FIELD_PROXY__.bind($S, new $T(" +
-                                                            "$S, $L, $L, $T.class, %s, %s);",
+                                                            "$S, $L, $L, $L.class, %s, %s);",
                                                     makeGetterTemplate(v, true), makeSetterTemplate(v, true)),
                                                     name,
-                                                    false,
+                                                    FieldBinding.class,
+                                                    name,
+                                                    true,
                                                     v.getModifiers(),
                                                     v.getType(),
                                                     qn, name,
@@ -512,13 +516,13 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                             constructorBindings.add(
                                     CodeBlock.of("__CONSTRUCTOR_PROXY__.bind(new " +
                                                     "$T(" +
-                                                    "$S, $L, $T.class, new Class[]{$L}, (args) -> new $T($L)));",
+                                                    "$S, $L, $L.class, new Class[]{$L}, (args) -> new $L($L)));",
                                             MethodBinding.class,
                                             "<init>",
                                             java.lang.reflect.Modifier.PUBLIC,
-                                            toClass(te.asType()),
+                                            te.getQualifiedName().toString(),
                                             String.join(", ", args),
-                                            toClass(te.asType()),
+                                            te.getQualifiedName().toString(),
                                             argStr));
                         });
                         b.addStaticBlock(CodeBlock.join(constructorBindings, "\n"));
