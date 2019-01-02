@@ -38,7 +38,7 @@ dependencies {
 //    compile 'com.austinv11.graphs:SimpleGraph:1.0.0'
 //    compile 'org.objenesis:objenesis:3.0.1'
 //    compile 'org.apache.commons:commons-collections4:4.2'
-    compileOnly "javax.annotation:javax.annotation-api:1.2"
+    compile "javax.annotation:javax.annotation-api:1.2"
     compile 'com.austinv11.servicer:Servicer:1.0.0'
 
     annotationProcessor 'com.austinv11.servicer:Servicer:1.0.0'
@@ -46,7 +46,7 @@ dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.12'
     testCompile 'com.google.testing.compile:compile-testing:0.15'
     testCompile 'com.google.truth:truth:0.42'
-    testCompileOnly "javax.annotation:javax.annotation-api:1.2"
+    testCompile "javax.annotation:javax.annotation-api:1.2"
     testCompile 'com.austinv11.servicer:Servicer:1.0.0'
 
     testAnnotationProcessor 'com.austinv11.servicer:Servicer:1.0.0'
