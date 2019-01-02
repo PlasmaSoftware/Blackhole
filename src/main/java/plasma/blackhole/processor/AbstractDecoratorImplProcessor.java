@@ -311,7 +311,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                         b.addField(FieldSpec
                                 .builder(TypeName.get(Class.class), "__ORIGINAL_CLASS__",
                                         Modifier.FINAL, Modifier.STATIC, Modifier.PRIVATE)
-                                .initializer(CodeBlock.of("$T.class;", originalClass))
+                                .initializer(CodeBlock.of("$L.class;", originalClass))
                                 .build());
 
                         b.addField(FieldSpec.builder(TypeName.get(annotation()), "__DECORATOR_INST__",
