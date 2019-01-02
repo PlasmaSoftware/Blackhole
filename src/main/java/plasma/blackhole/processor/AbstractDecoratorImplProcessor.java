@@ -629,7 +629,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                 String temp = md.getReturnType().equals(void.class) ? "" : "return ";
 
                                 builder.addStatement(temp + "__DRIVER__.methodWrap(__DECORATOR_INST__, __ORIGINAL_CLASS__, $L.getBinding($T.from($S, new " +
-                                                "Class[]{$L})$L);",
+                                                "Class[]{$L})$L));",
                                         stmt, MethodIdentifier.class, md.getName(),
                                         Arrays.stream(md.getArgTypes()).map(c -> c.getCanonicalName() + ".class")
                                                 .collect(Collectors.joining(",")),
