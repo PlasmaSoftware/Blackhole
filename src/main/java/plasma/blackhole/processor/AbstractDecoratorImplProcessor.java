@@ -12,11 +12,17 @@ import javax.annotation.Generated;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.*;
 import javax.lang.model.type.TypeMirror;
+import javax.tools.FileObject;
+import javax.tools.JavaFileManager;
+import javax.tools.JavaFileObject;
 import javax.tools.StandardLocation;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
@@ -252,6 +258,10 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
         builder.setAnnotations(annotations);
 
         return builder.build();
+    }
+
+    private OutputStream hackStream(JavaFileManager.Location location, String path) throws IOException {
+        return new FileOutputStream(getFiler().getResource(location, "", path).toUri().getPath());
     }
 
     @Override
@@ -657,9 +667,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
 
             try {
                 batch.publish(getFiler());
-                index.export(getFiler()
-                        .createResource(StandardLocation.CLASS_OUTPUT, "", "blackhole/decorated.idx")
-                        .openOutputStream());
+                index.export(hackStream(StandardLocation.CLASS_OUTPUT, "blackhole/decorated.idx"));
             } catch (IOException e) {
                 error("Exception caught running generated decorator processor!", e);
             }
