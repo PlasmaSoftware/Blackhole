@@ -44,7 +44,7 @@ public class ${name} extends AbstractDecoratorImplProcessor {
 
     @Override
     public String name() {
-        return "${annotation}";
+        return "${annotation_name}";
     }
 
     @Override

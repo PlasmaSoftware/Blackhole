@@ -76,10 +76,12 @@ public class DecoratorAnnotationProcessor extends AbstractBlackholeAnnotationPro
                 String pkg = fqn.substring(0, fqn.lastIndexOf('.'));
                 String name = fqn.substring(fqn.lastIndexOf('.')+1);
                 String processorName = name + "$$AnnotationProcessor";
+                String annotation = ((TypeElement) element).getQualifiedName().toString();
                 String newProcessor = TemplateEngine.bind(processorTemplate,
                         "package", pkg,
                         "name", processorName,
-                        "annotation", ((TypeElement) element).getQualifiedName().toString(),
+                        "annotation", annotation,
+                        "annotation_name", annotation.substring(annotation.lastIndexOf('.')+1),
                         "driver_package", pkg,
                         "driver", name,
                         "target", "TYPE",
@@ -126,10 +128,12 @@ public class DecoratorAnnotationProcessor extends AbstractBlackholeAnnotationPro
                 String pkg = fqn.substring(0, fqn.lastIndexOf('.'));
                 String name = fqn.substring(fqn.lastIndexOf('.')+1);
                 String processorName = name + "$$AnnotationProcessor";
+                String annotation = ((TypeElement) element).getQualifiedName().toString();
                 String newProcessor = TemplateEngine.bind(processorTemplate,
                         "package", pkg,
                         "name", processorName,
-                        "annotation", ((TypeElement) element).getQualifiedName().toString(),
+                        "annotation", annotation,
+                        "annotation_name", annotation.substring(annotation.lastIndexOf('.')+1),
                         "driver_package", pkg,
                         "driver", name,
                         "target", "METHOD",
