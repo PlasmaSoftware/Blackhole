@@ -299,6 +299,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                     String qn = te.getQualifiedName().toString();
                     String newName = qn.substring(qn.lastIndexOf('.') + 1) + "$$" + name() + "$Decorated";
                     String newPkg = qn.substring(0, qn.lastIndexOf('.'));
+                    String newQn = newPkg + "." + newName;
                     batch.newClass(newPkg, newName, b -> {
                         b.addAnnotation(AnnotationSpec.builder(Generated.class)
                                 .addMember("value", "$S", pkg() + "." + name())
@@ -516,7 +517,6 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                 });
                         b.addStaticBlock(CodeBlock.join(staticMethodBindings, "\n"));
 
-                        //TODO: wire
                         b.addField(FieldSpec
                                 .builder(TypeName.get(ConstructorProxy.class), "__CONSTRUCTOR_PROXY__",
                                         Modifier.FINAL, Modifier.STATIC, Modifier.PRIVATE)
@@ -543,9 +543,9 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                             MethodBinding.class,
                                             "<init>",
                                             java.lang.reflect.Modifier.PUBLIC,
-                                            te.getQualifiedName().toString(),
+                                            newQn,
                                             String.join(", ", args),
-                                            te.getQualifiedName().toString(),
+                                            newQn,
                                             argStr));
                         });
                         b.addStaticBlock(CodeBlock.join(constructorBindings, "\n"));
