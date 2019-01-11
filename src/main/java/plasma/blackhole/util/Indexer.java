@@ -132,6 +132,6 @@ public class Indexer<T> {
     }
 
     public static Indexer<String> readStringIndex(String s) {
-        return readStringIndex(new ByteArrayInputStream(s.getBytes()));
+        return readStringIndex(new ByteArrayInputStream(s.getBytes(Charset.forName("UTF-16"))));
     }
 }
