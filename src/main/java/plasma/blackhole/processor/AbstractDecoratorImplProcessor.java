@@ -649,7 +649,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                 String stmt = String.format("__%1$s_FIELD_PROXY__, __%1$s_METHOD_PROXY__, " +
                                                 "__%1$s_METHOD_PROXY__",
                                         isStatic ? "STATIC" : "INSTANCE");
-                                String temp = md.getReturnType().equals(void.class) ? "" : "return ";
+                                String temp = md.getReturnType().equals(void.class) ? "" : "return (" + md.getReturnType().getCanonicalName() + ") ";
 
                                 builder.addStatement(temp + "__DRIVER__.methodWrap(__DECORATOR_INST__, __ORIGINAL_CLASS__, $L.getBinding($T.from($S, new " +
                                                 "Class[]{$L})$L));",
