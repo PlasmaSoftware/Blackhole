@@ -9,6 +9,7 @@ import plasma.blackhole.util.internal.ResourceUtils;
 import plasma.blackhole.util.VarargFunction;
 import plasma.blackhole.util.support.FieldGetter;
 
+import java.nio.charset.Charset;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -22,7 +23,7 @@ public class Blackhole {
     private final static Map<Class, ConstructorProxy> constructorsGetterCache = new ConcurrentHashMap<>();
 
     static {
-        index = Indexer.readStringIndex(ResourceUtils.readFileOrEmpty("blackhole/decorated.idx"));
+        index = Indexer.readStringIndex(ResourceUtils.readFileOrEmpty("blackhole/decorated.idx", Charset.forName("UTF-16")));
     }
 
     public static boolean isDecorated(Class<?> clazz) {
