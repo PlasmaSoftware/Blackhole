@@ -17,7 +17,7 @@ public class FieldGetter {
 
             {
                 try {
-                    Field f = clazz.getField(fieldName);
+                    Field f = clazz.getDeclaredField(fieldName);
                     f.setAccessible(true);
                     MethodHandles.Lookup lookup = MethodHandles.lookup().in(clazz);
                     isStatic = Modifier.isStatic(f.getModifiers());
