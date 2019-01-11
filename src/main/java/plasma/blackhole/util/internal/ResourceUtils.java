@@ -4,6 +4,7 @@ import javax.annotation.processing.Filer;
 import javax.tools.FileObject;
 import javax.tools.StandardLocation;
 import java.io.*;
+import java.nio.charset.Charset;
 import java.util.Objects;
 
 public final class ResourceUtils {
@@ -34,7 +35,7 @@ public final class ResourceUtils {
     }
 
     private static String readFile(InputStream is) {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(Objects.requireNonNull(is)))) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(Objects.requireNonNull(is), Charset.forName("UTF-16")))) {
             StringBuilder sb = new StringBuilder();
             reader.lines().forEach(s -> sb.append(s).append("\n"));
             return sb.toString();
