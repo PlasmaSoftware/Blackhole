@@ -37,7 +37,7 @@ public class DecoratorAnnotationProcessor extends AbstractBlackholeAnnotationPro
         try {
             JavaFileBatch batch = new JavaFileBatch();
             boolean changed = handleClassDecorators(roundEnv, batch, roundEnv.getElementsAnnotatedWith(ClassDecorator.class));
-            changed = changed || handleMethodDecorators(roundEnv, batch, roundEnv.getElementsAnnotatedWith(MethodDecorator.class));
+            changed = changed | handleMethodDecorators(roundEnv, batch, roundEnv.getElementsAnnotatedWith(MethodDecorator.class));
             try {
                 batch.publish(getFiler());
             } catch (IOException e) {
