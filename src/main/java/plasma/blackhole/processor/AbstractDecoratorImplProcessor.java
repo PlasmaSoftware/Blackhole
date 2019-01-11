@@ -327,17 +327,17 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                         b.addField(FieldSpec
                                 .builder(TypeName.get(driver), "__DRIVER__",
                                         Modifier.FINAL, Modifier.STATIC, Modifier.PRIVATE)
-                                .initializer(CodeBlock.of("new $T();", driver))
+                                .initializer(CodeBlock.of("new $T()", driver))
                                 .build());
                         b.addField(FieldSpec
                                 .builder(TypeName.get(Class.class), "__ORIGINAL_CLASS__",
                                         Modifier.FINAL, Modifier.STATIC, Modifier.PRIVATE)
-                                .initializer(CodeBlock.of("$L.class;", originalClass))
+                                .initializer(CodeBlock.of("$L.class", originalClass))
                                 .build());
 
                         b.addField(FieldSpec.builder(TypeName.get(AnnotationDefinition.class), "__DECORATOR_INST__",
                                 Modifier.FINAL, Modifier.STATIC, Modifier.PRIVATE)
-                                .initializer(CodeBlock.of("$L;", new AnnotationDefinition(te.getAnnotation(annotation())).builderCode()))
+                                .initializer(CodeBlock.of("$L", new AnnotationDefinition(te.getAnnotation(annotation())).builderCode()))
                                 .build());
 
                         //Force static init of superclass
@@ -436,7 +436,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                         b.addField(FieldSpec
                                 .builder(TypeName.get(FieldProxy.class), "__STATIC_FIELD_PROXY__",
                                         Modifier.FINAL, Modifier.STATIC, Modifier.PRIVATE)
-                                .initializer(CodeBlock.of("new $T();", FieldProxy.class))
+                                .initializer(CodeBlock.of("new $T()", FieldProxy.class))
                                 .build());
 
                         List<CodeBlock> staticFieldBindings = new ArrayList<>();
@@ -446,7 +446,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                     String name = v.getName();
                                     staticFieldBindings.add(
                                             CodeBlock.of(String.format("__STATIC_FIELD_PROXY__.bind($S, new $T(" +
-                                                            "$S, $L, $L, $L.class, %s, %s);",
+                                                            "$S, $L, $L, $L.class, %s, %s)",
                                                     makeGetterTemplate(v, false), makeSetterTemplate(v, false)),
                                                     name,
                                                     FieldBinding.class,
@@ -462,7 +462,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                         b.addField(FieldSpec
                                 .builder(TypeName.get(FieldProxy.class), "__INSTANCE_FIELD_PROXY__",
                                         Modifier.FINAL, Modifier.PRIVATE)
-                                .initializer(CodeBlock.of("new $T(__STATIC_FIELD_PROXY__);", FieldProxy.class))
+                                .initializer(CodeBlock.of("new $T(__STATIC_FIELD_PROXY__)", FieldProxy.class))
                                 .build());
 
                         List<CodeBlock> instanceFieldBindings = new ArrayList<>();
@@ -472,7 +472,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                     String name = v.getName();
                                     instanceFieldBindings.add(
                                             CodeBlock.of(String.format("__INSTANCE_FIELD_PROXY__.bind($S, new $T(" +
-                                                            "$S, $L, $L, $L.class, %s, %s);",
+                                                            "$S, $L, $L, $L.class, %s, %s)",
                                                     makeGetterTemplate(v, true), makeSetterTemplate(v, true)),
                                                     name,
                                                     FieldBinding.class,
@@ -492,7 +492,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                         b.addField(FieldSpec
                                 .builder(TypeName.get(MethodProxy.class), "__STATIC_METHOD_PROXY__",
                                         Modifier.FINAL, Modifier.STATIC, Modifier.PRIVATE)
-                                .initializer(CodeBlock.of("new $T();", MethodProxy.class))
+                                .initializer(CodeBlock.of("new $T()", MethodProxy.class))
                                 .build());
 
                         List<CodeBlock> staticMethodBindings = new ArrayList<>();
@@ -506,7 +506,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                     staticMethodBindings.add(
                                             CodeBlock.of("__STATIC_METHOD_PROXY__.bind($S, new " +
                                                             "$T(" +
-                                                            "$S, $L, $T.class, new Class[]{$L}, $L));",
+                                                            "$S, $L, $T.class, new Class[]{$L}, $L))",
                                                     name,
                                                     MethodBinding.class,
                                                     name,
@@ -520,7 +520,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                         b.addField(FieldSpec
                                 .builder(TypeName.get(ConstructorProxy.class), "__CONSTRUCTOR_PROXY__",
                                         Modifier.FINAL, Modifier.STATIC, Modifier.PRIVATE)
-                                .initializer(CodeBlock.of("new $T();", ConstructorProxy.class))
+                                .initializer(CodeBlock.of("new $T()", ConstructorProxy.class))
                                 .build());
 
                         List<CodeBlock> constructorBindings = new ArrayList<>();
@@ -539,7 +539,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                             constructorBindings.add(
                                     CodeBlock.of("__CONSTRUCTOR_PROXY__.bind(new " +
                                                     "$T(" +
-                                                    "$S, $L, $L.class, new Class[]{$L}, (args) -> new $L($L)));",
+                                                    "$S, $L, $L.class, new Class[]{$L}, (args) -> new $L($L)))",
                                             MethodBinding.class,
                                             "<init>",
                                             java.lang.reflect.Modifier.PUBLIC,
@@ -553,7 +553,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                         b.addField(FieldSpec
                                 .builder(TypeName.get(MethodProxy.class), "__INSTANCE_METHOD_PROXY__",
                                         Modifier.FINAL, Modifier.PRIVATE)
-                                .initializer(CodeBlock.of("new $T(__STATIC_METHOD_PROXY__);", MethodProxy.class))
+                                .initializer(CodeBlock.of("new $T(__STATIC_METHOD_PROXY__)", MethodProxy.class))
                                 .build());
 
 
@@ -568,7 +568,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                     instanceMethodBindings.add(
                                             CodeBlock.of("__INSTANCE_METHOD_PROXY__.bind($S, " +
                                                             "new $T(" +
-                                                            "$S, $L, $T.class, new Class[]{$L}, $L));",
+                                                            "$S, $L, $T.class, new Class[]{$L}, $L))",
                                                     name,
                                                     MethodBinding.class,
                                                     name,
@@ -582,7 +582,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                 .addCode(CodeBlock.join(instanceMethodBindings, "\n"))
                                 .build());
 
-                        b.addStaticBlock(CodeBlock.of("__DRIVER__.runtimeInit(__DECORATOR_INST__, __ORIGINAL_CLASS__, __STATIC_FIELD_PROXY__);"));
+                        b.addStaticBlock(CodeBlock.of("__DRIVER__.runtimeInit(__DECORATOR_INST__, __ORIGINAL_CLASS__, __STATIC_FIELD_PROXY__)"));
 
                         constructors.forEach(con -> {
                             MethodSpec.Builder builder = MethodSpec.constructorBuilder()
@@ -602,14 +602,14 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                             String argListString = IntStream.range(0, parameters.size()).mapToObj(i -> "arg" + i)
                                     .collect(Collectors.joining(","));
 
-                            builder.addStatement("super(" + argListString + ");");
+                            builder.addStatement("super(" + argListString + ")");
 
-                            builder.addStatement("this.__FIELD_PROXY_INIT__();");
-                            builder.addStatement("this.__METHOD_PROXY_INIT__();");
+                            builder.addStatement("this.__FIELD_PROXY_INIT__()");
+                            builder.addStatement("this.__METHOD_PROXY_INIT__()");
 
                             if (isClassDecorator) {
                                 builder.addStatement("__DRIVER__.init(__DECORATOR_INST__, __ORIGINAL_CLASS__, this.__INSTANCE_FIELD_PROXY__, " +
-                                        "this.__INSTANCE_METHOD_PROXY__$L);", argListString.isEmpty()
+                                        "this.__INSTANCE_METHOD_PROXY__$L)", argListString.isEmpty()
                                         ? "" : ", " + argListString);
                             }
 
@@ -652,7 +652,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                 String temp = md.getReturnType().equals(void.class) ? "" : "return (" + md.getReturnType().getCanonicalName() + ") ";
 
                                 builder.addStatement(temp + "__DRIVER__.methodWrap(__DECORATOR_INST__, __ORIGINAL_CLASS__, $L.getBinding($T.from($S, new " +
-                                                "Class[]{$L})$L));",
+                                                "Class[]{$L})$L))",
                                         stmt, MethodIdentifier.class, md.getName(),
                                         Arrays.stream(md.getArgTypes()).map(c -> c.getCanonicalName() + ".class")
                                                 .collect(Collectors.joining(",")),
