@@ -23,6 +23,7 @@ import java.io.OutputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.net.URI;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
@@ -276,7 +277,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         try {
-            Indexer<String> index = Indexer.readStringIndex(ResourceUtils.readFileOrEmpty(getFiler(), "blackhole/decorated.idx"));
+            Indexer<String> index = Indexer.readStringIndex(ResourceUtils.readFileOrEmpty(getFiler(), "blackhole/decorated.idx", Charset.forName("UTF-16")));
             JavaFileBatch batch = new JavaFileBatch();
             TypeElement generated = getElementUtils().getTypeElement("javax.annotation.Generated");
             TypeElement myAnnotation = getElementUtils().getTypeElement(getSupportedAnnotationTypes().stream()
