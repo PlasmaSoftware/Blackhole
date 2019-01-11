@@ -18,11 +18,10 @@ public class FieldGetter {
             {
                 try {
                     Field f = clazz.getField(fieldName);
+                    f.setAccessible(true);
                     MethodHandles.Lookup lookup = MethodHandles.lookup().in(clazz);
                     isStatic = Modifier.isStatic(f.getModifiers());
-                    fg = isStatic
-                            ? lookup.findStaticGetter(f.getDeclaringClass(), fieldName, fieldType)
-                            : lookup.findGetter(f.getDeclaringClass(), fieldName, fieldType);
+                    fg = lookup.unreflectGetter(f);
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
