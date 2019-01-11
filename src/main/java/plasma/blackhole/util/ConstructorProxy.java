@@ -5,7 +5,11 @@ public class ConstructorProxy extends MethodProxy {
 
     private final static String CONSTRUCTOR_NAME = "<init>";
 
-    public ConstructorProxy(MethodProxy inherits) { //No reason for this anymore
+    public ConstructorProxy() {
+        super();
+    }
+
+    private ConstructorProxy(MethodProxy inherits) { //No reason for this anymore
         super(inherits);
     }
 

@@ -189,9 +189,12 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
     }
 
     private String generateInvoker(String originatingFqn, MethodDefinition m) {
-        String lambda = originatingFqn + ".";
+        String lambda;
         if (!m.isStatic())
-            lambda += "this.";
+            lambda = "super.";
+        else {
+            lambda = originatingFqn + ".";
+        }
         List<String> argList = new ArrayList<>();
         for (int i = 0; i < m.getArgTypes().length; i++) {
             argList.add("(" + m.getArgTypes()[i].getCanonicalName() + ") args[" + i + "]");
