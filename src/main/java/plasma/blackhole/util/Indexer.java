@@ -74,7 +74,7 @@ public class Indexer<T> {
                                            InputStream stream) {
         Indexer<T> i = new Indexer<>(serializer);
 
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream))) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream, Charset.forName("UTF-16")))) {
             String read = reader.lines().collect(Collectors.joining("\n"));
             StringBuilder key = null;
             StringBuilder value = null;
