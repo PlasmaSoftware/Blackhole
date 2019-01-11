@@ -188,8 +188,8 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
         return mods.toArray(new Modifier[0]);
     }
 
-    private String generateInvoker(MethodDefinition m) {
-        String lambda = ".";
+    private String generateInvoker(String originatingFqn, MethodDefinition m) {
+        String lambda = originatingFqn + ".";
         if (!m.isStatic())
             lambda += "this.";
         List<String> argList = new ArrayList<>();
@@ -502,15 +502,14 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                     staticMethodBindings.add(
                                             CodeBlock.of("__STATIC_METHOD_PROXY__.bind($S, new " +
                                                             "$T(" +
-                                                            "$S, $L, $T.class, new Class[]{$L}, $L$L));",
+                                                            "$S, $L, $T.class, new Class[]{$L}, $L));",
                                                     name,
                                                     MethodBinding.class,
                                                     name,
                                                     m.getModifiers(),
                                                     m.getReturnType(),
                                                     String.join(", ", args),
-                                                    qn,
-                                                    generateInvoker(m)));
+                                                    generateInvoker(qn, m)));
                                 });
                         b.addStaticBlock(CodeBlock.join(staticMethodBindings, "\n"));
 
@@ -566,15 +565,14 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                     instanceMethodBindings.add(
                                             CodeBlock.of("__INSTANCE_METHOD_PROXY__.bind($S, " +
                                                             "new $T(" +
-                                                            "$S, $L, $T.class, new Class[]{$L}, $L$L));",
+                                                            "$S, $L, $T.class, new Class[]{$L}, $L));",
                                                     name,
                                                     MethodBinding.class,
                                                     name,
                                                     m.getModifiers(),
                                                     m.getReturnType(),
                                                     String.join(", ", args),
-                                                    qn,
-                                                    generateInvoker(m)));
+                                                    generateInvoker(qn, m)));
                                 });
                         b.addMethod(MethodSpec.methodBuilder("__METHOD_PROXY_INIT__")
                                 .addModifiers(Modifier.FINAL, Modifier.PRIVATE)
