@@ -1,6 +1,7 @@
 package plasma.blackhole.util;
 
 import java.io.*;
+import java.nio.charset.Charset;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -54,14 +55,14 @@ public class Indexer<T> {
     }
 
     public void export(OutputStream stream1) {
-        try (PrintStream stream = new PrintStream(stream1)) {
+        try (OutputStreamWriter stream = new OutputStreamWriter(stream1, Charset.forName("UTF-16"))) {
             for (Map.Entry<String, T> entry : index.entrySet()) {
                 String key = entry.getKey();
                 T value = entry.getValue();
-                stream.print(key);
-                stream.print(SEP);
-                stream.print(serializer.apply(value));
-                stream.print(SEP);
+                stream.append(key);
+                stream.append(SEP);
+                stream.append(serializer.apply(value));
+                stream.append(SEP);
             }
         } catch (Exception e) {
             throw new RuntimeException(e);

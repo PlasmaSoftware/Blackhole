@@ -2,6 +2,7 @@ package plasma.blackhole.test;
 
 import org.junit.Test;
 import plasma.blackhole.util.Indexer;
+import plasma.blackhole.util.internal.ResourceUtils;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -49,5 +50,11 @@ public class TestIndexer {
         assertEquals("hello2", index.find("world"));
         assertEquals("world2", index.find("hello2"));
         assertEquals("world2", index.forwardLookup("hello"));
+    }
+
+    @Test
+    public void testEmptyOrNonExistentIndex() {
+        Indexer<String> index = Indexer.readStringIndex(ResourceUtils.readFileOrEmpty("bleh"));
+        assertEquals(0, index.keys().size());
     }
 }
