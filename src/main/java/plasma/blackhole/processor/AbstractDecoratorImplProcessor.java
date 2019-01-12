@@ -85,24 +85,24 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
         return toClass(var.asType());
     }
 
-    private String makeGetterTemplate(FieldDefinition var, boolean instance) {
+    private String makeGetterTemplate(FieldDefinition var, boolean instance, String parent) {
 //        try {
 //            Class type = Class.forName(var.asType().toString());
 //            if (type.isPrimitive()) {
 //                return String.format("() -> (%s) $T.$L", );
 //            } else {
-                return instance ? "() -> $T.this.$L" : "() -> $T.$L";
+                return instance ? "() -> super.$L" : "() -> " + parent + ".$L";
 //            }
 //        } catch (ClassNotFoundException e) {
 //            throw new RuntimeException(e);
 //        }
     }
 
-    private String makeSetterTemplate(FieldDefinition var, boolean instance) {
+    private String makeSetterTemplate(FieldDefinition var, boolean instance, String parent) {
         if (java.lang.reflect.Modifier.isFinal(var.getModifiers())) {
             return "(o) -> {}";
         } else {
-            return instance ? "(internal_binding) -> $T.this.$L = internal_binding" : "(internal_binding) -> $T.$L = internal_binding";
+            return instance ? "(internal_binding) -> super.$L = internal_binding" : "(internal_binding) -> " + parent + ".$L = internal_binding";
         }
     }
 
@@ -488,15 +488,15 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                     staticFieldBindings.add(
                                             CodeBlock.of(String.format("__STATIC_FIELD_PROXY__.bind($S, new $T(" +
                                                             "$S, $L, $L, $L.class, %s, %s);",
-                                                    makeGetterTemplate(v, false), makeSetterTemplate(v, false)),
+                                                    makeGetterTemplate(v, false, qn), makeSetterTemplate(v, false, qn)),
                                                     name,
                                                     FieldBinding.class,
                                                     name,
                                                     true,
                                                     v.getModifiers(),
                                                     v.getType(),
-                                                    qn, name,
-                                                    qn, name));
+                                                    name,
+                                                    name));
                                 });
                         b.addStaticBlock(CodeBlock.join(staticFieldBindings, "\n"));
 
@@ -514,15 +514,15 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                     instanceFieldBindings.add(
                                             CodeBlock.of(String.format("__INSTANCE_FIELD_PROXY__.bind($S, new $T(" +
                                                             "$S, $L, $L, $L.class, %s, %s);",
-                                                    makeGetterTemplate(v, true), makeSetterTemplate(v, true)),
+                                                    makeGetterTemplate(v, true, qn), makeSetterTemplate(v, true, qn)),
                                                     name,
                                                     FieldBinding.class,
                                                     name,
                                                     true,
                                                     v.getModifiers(),
                                                     v.getType(),
-                                                    qn, name,
-                                                    qn, name));
+                                                    name,
+                                                    name));
                                 });
                         b.addMethod(MethodSpec.methodBuilder("__FIELD_PROXY_INIT__")
                                 .addModifiers(Modifier.FINAL, Modifier.PRIVATE)
