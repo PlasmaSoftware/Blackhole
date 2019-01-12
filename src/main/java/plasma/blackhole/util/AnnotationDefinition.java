@@ -1,5 +1,6 @@
 package plasma.blackhole.util;
 
+import plasma.blackhole.util.internal.ClassTypeProxy;
 import plasma.blackhole.util.internal.ClassUtils;
 
 import java.lang.annotation.Annotation;
@@ -51,6 +52,9 @@ public class AnnotationDefinition {
     public static String toAnnotationLiteral(Object o) {
         if (o == null)
             return "null";
+
+        if (o instanceof ClassTypeProxy)
+            return ((ClassTypeProxy) o).toLiteral();
 
         Class<?> type = o.getClass();
         if (type.isArray()) {

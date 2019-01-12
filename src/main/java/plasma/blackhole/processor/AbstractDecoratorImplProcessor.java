@@ -5,6 +5,7 @@ import plasma.blackhole.api.ClassDecoratorDriver;
 import plasma.blackhole.api.MethodDecoratorDriver;
 import plasma.blackhole.api.annotations.Decorated;
 import plasma.blackhole.util.*;
+import plasma.blackhole.util.internal.ClassTypeProxy;
 import plasma.blackhole.util.internal.ClassUtils;
 import plasma.blackhole.util.internal.ResourceUtils;
 
@@ -238,6 +239,8 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
             am.getElementValues().forEach((k, v) -> {
                 String name = k.getSimpleName().toString();
                 Object o = v.getValue();
+                if (o instanceof TypeMirror)
+                    o = new ClassTypeProxy((TypeMirror) o);
                 ab.bindParameter(name, o);
             });
             annotations[i-sizeReduction] = ab.build();
@@ -259,6 +262,8 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
             am.getElementValues().forEach((k, v) -> {
                 String name = k.getSimpleName().toString();
                 Object o = v.getValue();
+                if (o instanceof TypeMirror)
+                    o = new ClassTypeProxy((TypeMirror) o);
                 ab.bindParameter(name, o);
             });
             annotations[i] = ab.build();
