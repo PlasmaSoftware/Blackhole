@@ -243,7 +243,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
         for (int i = 0; i < annotations.length; i++) {
             AnnotationMirror am = ee.getAnnotationMirrors().get(i);
             TypeElement element = (TypeElement) am.getAnnotationType().asElement();
-            if (!element.equals(generated) && !element.equals(myAnnotation) && !element.equals(decorated)) {
+            if (element.equals(generated) || element.equals(myAnnotation) || element.equals(decorated)) {
                 sizeReduction++;
                 continue;
             }
