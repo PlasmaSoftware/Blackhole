@@ -56,26 +56,24 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
     }
 
     private boolean claimType(TypeElement te) { //Used to force a single decorator per class in each round
-        //TODO: Is this actually needed?
         //FIXME: use in-memory state somehow. Static fields?
-//        try {
-//            File tracker = new File("./blackhole_claims.tmp");
-//            if (!tracker.exists()) {
-//                if (!tracker.createNewFile())
-//                    throw new IOException("Cannot create blackhole_claims.tmp file!");
-//                tracker.deleteOnExit();
-//            }
-//            String name = te.getQualifiedName().toString();
-//            if (!Files.readAllLines(tracker.toPath()).contains(name)) {
-//                Files.write(tracker.toPath(), (name + "\n").getBytes(), StandardOpenOption.APPEND);
-//                return true;
-//            } else {
-//                return false;
-//            }
-//        } catch (IOException e) {
-//            throw new RuntimeException(e);
-//        }
-        return true;
+        try {
+            File tracker = new File("./blackhole_claims.tmp");
+            if (!tracker.exists()) {
+                if (!tracker.createNewFile())
+                    throw new IOException("Cannot create blackhole_claims.tmp file!");
+                tracker.deleteOnExit();
+            }
+            String name = te.getQualifiedName().toString() + "!";
+            if (!Files.readAllLines(tracker.toPath()).contains(name)) {
+                Files.write(tracker.toPath(), (name + "\n").getBytes(), StandardOpenOption.APPEND);
+                return true;
+            } else {
+                return false;
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private Class toClass(TypeMirror type) {
@@ -294,7 +292,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
             TypeElement generated = getElementUtils().getTypeElement("javax.annotation.Generated");
             TypeElement myAnnotation = getElementUtils().getTypeElement(getSupportedAnnotationTypes().stream()
                     .findFirst().get());
-            TypeElement decorated = getElementUtils().getTypeElement("plasma.blackhole.annotations.Decorated");
+            TypeElement decorated = getElementUtils().getTypeElement("plasma.blackhole.api.annotations.Decorated");
             boolean isClassDecorator = getTarget() == Target.TYPE;
             Class<?> driver = isClassDecorator ? classDriver() : methodDriver();
 
