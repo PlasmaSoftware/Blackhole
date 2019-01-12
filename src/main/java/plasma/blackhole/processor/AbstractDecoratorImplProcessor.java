@@ -35,6 +35,8 @@ import java.util.stream.Stream;
 //TODO: Handle generics and varargs
 public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAnnotationProcessor {
 
+    private static final long runid = System.currentTimeMillis();
+
     private TypeElement generated;
     private TypeElement myAnnotation;
     private TypeElement decorated;
@@ -63,6 +65,12 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
         //FIXME: use in-memory state somehow. Static fields?
         try {
             File tracker = new File("./blackhole_claims.tmp").toPath().toAbsolutePath().toFile();
+            if (tracker.exists()) {
+                long lastRunid = Long.valueOf(Files.readAllLines(tracker.toPath()).get(0));
+                if (lastRunid != runid)
+                    if (!tracker.delete())
+                        throw new RuntimeException("Cannot clean old claim file! Is another build running? Location: " + tracker.getPath());
+            }
             if (!tracker.exists()) {
                 if (!tracker.createNewFile())
                     throw new IOException("Cannot create blackhole_claims.tmp file!");
