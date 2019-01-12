@@ -393,7 +393,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
 
                             b.addField(FieldSpec.builder(TypeName.get(AnnotationDefinition[].class), "__DECORATOR_INST__",
                                     Modifier.FINAL, Modifier.STATIC, Modifier.PRIVATE)
-                                    .initializer(CodeBlock.join(Arrays.asList(CodeBlock.of("new $T[]{", TypeName.get(AnnotationDefinition[].class)),
+                                    .initializer(CodeBlock.join(Arrays.asList(CodeBlock.of("new $T{", TypeName.get(AnnotationDefinition[].class)),
                                             CodeBlock.join(arrayInitializers, ", "),
                                             CodeBlock.of("};")), ""))
                                     .addAnnotation(generatedSpec)
