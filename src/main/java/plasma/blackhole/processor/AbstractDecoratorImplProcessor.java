@@ -405,15 +405,12 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
 
                         //First we need to collect ALL elements
                         List<ExecutableElement> constructors;
-                        if (isClassDecorator)
-                            constructors = te.getEnclosedElements()
-                                    .stream()
-                                    .filter(ee -> ee instanceof ExecutableElement)
-                                    .map(ExecutableElement.class::cast)
-                                    .filter(ee -> ee.getKind() == ElementKind.CONSTRUCTOR)
-                                    .collect(Collectors.toList());
-                        else
-                            constructors = new ArrayList<>();
+                        constructors = te.getEnclosedElements()
+                                .stream()
+                                .filter(ee -> ee instanceof ExecutableElement)
+                                .map(ExecutableElement.class::cast)
+                                .filter(ee -> ee.getKind() == ElementKind.CONSTRUCTOR)
+                                .collect(Collectors.toList());
 
                         List<ExecutableElement> methods;
                         if (isClassDecorator)
