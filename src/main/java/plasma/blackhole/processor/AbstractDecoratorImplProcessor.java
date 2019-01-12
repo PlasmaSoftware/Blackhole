@@ -323,10 +323,11 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                     String newName = qn.substring(qn.lastIndexOf('.') + 1) + "$$" + name() + "$Decorated";
                     String newPkg = qn.substring(0, qn.lastIndexOf('.'));
                     String newQn = newPkg + "." + newName;
+                    AnnotationSpec generatedSpec = AnnotationSpec.builder(Generated.class)
+                            .addMember("value", "$S", pkg() + "." + name())
+                            .build();
                     batch.newClass(newPkg, newName, b -> {
-                        b.addAnnotation(AnnotationSpec.builder(Generated.class)
-                                .addMember("value", "$S", pkg() + "." + name())
-                                .build())
+                        b.addAnnotation(generatedSpec)
                                 .addModifiers(Modifier.PUBLIC);
 
 
@@ -351,11 +352,13 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                 .builder(TypeName.get(driver), "__DRIVER__",
                                         Modifier.FINAL, Modifier.STATIC, Modifier.PRIVATE)
                                 .initializer(CodeBlock.of("new $T();", driver))
+                                .addAnnotation(generatedSpec)
                                 .build());
                         b.addField(FieldSpec
                                 .builder(TypeName.get(Class.class), "__ORIGINAL_CLASS__",
                                         Modifier.FINAL, Modifier.STATIC, Modifier.PRIVATE)
                                 .initializer(CodeBlock.of("$L.class;", originalClass))
+                                .addAnnotation(generatedSpec)
                                 .build());
 
                         //Force static init of superclass
@@ -374,6 +377,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                             b.addField(FieldSpec.builder(TypeName.get(AnnotationDefinition.class), "__DECORATOR_INST__",
                                     Modifier.FINAL, Modifier.STATIC, Modifier.PRIVATE)
                                     .initializer(CodeBlock.of("$L;", new AnnotationDefinition(te.getAnnotation(annotation())).builderCode()))
+                                    .addAnnotation(generatedSpec)
                                     .build());
                         } else {
                             List<CodeBlock> arrayInitializers = new ArrayList<>();
@@ -392,6 +396,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                     .initializer(CodeBlock.join(Arrays.asList(CodeBlock.of("new $T[]{", TypeName.get(AnnotationDefinition[].class)),
                                             CodeBlock.join(arrayInitializers, ", "),
                                             CodeBlock.of("};")), ""))
+                                    .addAnnotation(generatedSpec)
                                     .build());
                         }
 
@@ -427,6 +432,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                 .filter(ee -> ee instanceof VariableElement)
                                 .map(VariableElement.class::cast)
                                 .filter(ee -> ee.getKind() == ElementKind.FIELD)
+                                .filter(ee -> ee.getAnnotation(Generated.class) == null)
                                 .collect(Collectors.toList());
 
                         List<Method> interfaceMethods = Arrays.stream(interfaces())
@@ -501,6 +507,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                 .builder(TypeName.get(FieldProxy.class), "__STATIC_FIELD_PROXY__",
                                         Modifier.FINAL, Modifier.STATIC, Modifier.PRIVATE)
                                 .initializer(CodeBlock.of("new $T();", FieldProxy.class))
+                                .addAnnotation(generatedSpec)
                                 .build());
 
                         List<CodeBlock> staticFieldBindings = new ArrayList<>();
@@ -526,6 +533,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                 .builder(TypeName.get(FieldProxy.class), "__INSTANCE_FIELD_PROXY__",
                                         Modifier.FINAL, Modifier.PRIVATE)
                                 .initializer(CodeBlock.of("new $T(__STATIC_FIELD_PROXY__);", FieldProxy.class))
+                                .addAnnotation(generatedSpec)
                                 .build());
 
                         List<CodeBlock> instanceFieldBindings = new ArrayList<>();
@@ -555,6 +563,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                 .builder(TypeName.get(MethodProxy.class), "__STATIC_METHOD_PROXY__",
                                         Modifier.FINAL, Modifier.STATIC, Modifier.PRIVATE)
                                 .initializer(CodeBlock.of("new $T();", MethodProxy.class))
+                                .addAnnotation(generatedSpec)
                                 .build());
 
                         List<CodeBlock> staticMethodBindings = new ArrayList<>();
@@ -583,6 +592,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                 .builder(TypeName.get(ConstructorProxy.class), "__CONSTRUCTOR_PROXY__",
                                         Modifier.FINAL, Modifier.STATIC, Modifier.PRIVATE)
                                 .initializer(CodeBlock.of("new $T();", ConstructorProxy.class))
+                                .addAnnotation(generatedSpec)
                                 .build());
 
                         List<CodeBlock> constructorBindings = new ArrayList<>();
@@ -616,6 +626,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                 .builder(TypeName.get(MethodProxy.class), "__INSTANCE_METHOD_PROXY__",
                                         Modifier.FINAL, Modifier.PRIVATE)
                                 .initializer(CodeBlock.of("new $T(__STATIC_METHOD_PROXY__);", MethodProxy.class))
+                                .addAnnotation(generatedSpec)
                                 .build());
 
 
