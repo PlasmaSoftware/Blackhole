@@ -58,7 +58,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
     private boolean claimType(TypeElement te) { //Used to force a single decorator per class in each round
         //FIXME: use in-memory state somehow. Static fields?
         try {
-            File tracker = new File("./blackhole_claims.tmp");
+            File tracker = new File("./blackhole_claims.tmp").toPath().toAbsolutePath().toFile();
             if (!tracker.exists()) {
                 if (!tracker.createNewFile())
                     throw new IOException("Cannot create blackhole_claims.tmp file!");
