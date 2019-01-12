@@ -74,6 +74,8 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
             if (!tracker.exists()) {
                 if (!tracker.createNewFile())
                     throw new IOException("Cannot create blackhole_claims.tmp file!");
+
+                Files.write(tracker.toPath(), (runid + "\n").getBytes(), StandardOpenOption.APPEND);
                 tracker.deleteOnExit();
             }
             String name = te.getQualifiedName().toString() + "!";
