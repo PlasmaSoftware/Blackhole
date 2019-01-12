@@ -35,10 +35,9 @@ import java.util.stream.Stream;
 //TODO: Handle generics and varargs
 public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAnnotationProcessor {
 
-    private final TypeElement generated = getElementUtils().getTypeElement("javax.annotation.Generated");
-    private final TypeElement myAnnotation = getElementUtils().getTypeElement(getSupportedAnnotationTypes().stream()
-            .findFirst().get());
-    private final TypeElement decorated = getElementUtils().getTypeElement("plasma.blackhole.api.annotations.Decorated");
+    private TypeElement generated;
+    private TypeElement myAnnotation;
+    private TypeElement decorated;
 
     public abstract Target getTarget();
 
@@ -293,6 +292,10 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         try {
+            generated = getElementUtils().getTypeElement("javax.annotation.Generated");
+            myAnnotation = getElementUtils().getTypeElement(getSupportedAnnotationTypes().stream().findFirst().get());
+            decorated = getElementUtils().getTypeElement("plasma.blackhole.api.annotations.Decorated");
+
             Indexer<String> index = Indexer.readStringIndex(ResourceUtils.readFileOrEmpty(getFiler(), "blackhole/decorated.idx", Charset.forName("UTF-16")));
             JavaFileBatch batch = new JavaFileBatch();
             boolean isClassDecorator = getTarget() == Target.TYPE;
