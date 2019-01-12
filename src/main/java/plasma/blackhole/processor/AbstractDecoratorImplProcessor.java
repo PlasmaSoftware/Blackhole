@@ -360,7 +360,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                     .filter(it -> it.getEnclosingElement().equals(te))
                                     .map(ExecutableElement.class::cast)
                                     .peek(ee -> {
-                                        arrayInitializers.add(CodeBlock.of("$L", new AnnotationDefinition(te.getAnnotation(annotation())).builderCode()));
+                                        arrayInitializers.add(CodeBlock.of("$L", new AnnotationDefinition(ee.getAnnotation(annotation())).builderCode()));
                                     })
                                     .forEach(methodAnnotationIndexTmp::add);
 
