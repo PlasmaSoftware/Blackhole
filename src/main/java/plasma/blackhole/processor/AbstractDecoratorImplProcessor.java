@@ -35,6 +35,11 @@ import java.util.stream.Stream;
 //TODO: Handle generics and varargs
 public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAnnotationProcessor {
 
+    private final TypeElement generated = getElementUtils().getTypeElement("javax.annotation.Generated");
+    private final TypeElement myAnnotation = getElementUtils().getTypeElement(getSupportedAnnotationTypes().stream()
+            .findFirst().get());
+    private final TypeElement decorated = getElementUtils().getTypeElement("plasma.blackhole.api.annotations.Decorated");
+
     public abstract Target getTarget();
 
     public abstract Class<? extends ClassDecoratorDriver> classDriver();
@@ -228,7 +233,8 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
         AnnotationDefinition[] annotations = new AnnotationDefinition[ee.getAnnotationMirrors().size()];
         for (int i = 0; i < annotations.length; i++) {
             AnnotationMirror am = ee.getAnnotationMirrors().get(i);
-            if (toClass(am.getAnnotationType()).equals(annotation())) {
+            TypeElement element = (TypeElement) am.getAnnotationType().asElement();
+            if (!element.equals(generated) && !element.equals(myAnnotation) && !element.equals(decorated)) {
                 sizeReduction++;
                 continue;
             }
@@ -289,10 +295,6 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
         try {
             Indexer<String> index = Indexer.readStringIndex(ResourceUtils.readFileOrEmpty(getFiler(), "blackhole/decorated.idx", Charset.forName("UTF-16")));
             JavaFileBatch batch = new JavaFileBatch();
-            TypeElement generated = getElementUtils().getTypeElement("javax.annotation.Generated");
-            TypeElement myAnnotation = getElementUtils().getTypeElement(getSupportedAnnotationTypes().stream()
-                    .findFirst().get());
-            TypeElement decorated = getElementUtils().getTypeElement("plasma.blackhole.api.annotations.Decorated");
             boolean isClassDecorator = getTarget() == Target.TYPE;
             Class<?> driver = isClassDecorator ? classDriver() : methodDriver();
 
