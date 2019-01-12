@@ -11,6 +11,6 @@ public class ClassTypeProxy {
     }
 
     public String toLiteral() {
-        return mirror.toString() + ".class";
+        return mirror.toString().replace("class ", "") + ".class";
     }
 }

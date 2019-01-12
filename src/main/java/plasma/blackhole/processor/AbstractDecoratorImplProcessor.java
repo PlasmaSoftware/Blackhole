@@ -294,6 +294,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
             TypeElement generated = getElementUtils().getTypeElement("javax.annotation.Generated");
             TypeElement myAnnotation = getElementUtils().getTypeElement(getSupportedAnnotationTypes().stream()
                     .findFirst().get());
+            TypeElement decorated = getElementUtils().getTypeElement("plasma.blackhole.annotations.Decorated");
             boolean isClassDecorator = getTarget() == Target.TYPE;
             Class<?> driver = isClassDecorator ? classDriver() : methodDriver();
 
@@ -345,13 +346,13 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                 .build());
 
                         //Force static init of superclass
-                        b.addStaticBlock(CodeBlock.of("try { $T.forName($S); } catch ($T e) {}", Class.class, escapeQnForCodeBlock(qn),
+                        b.addStaticBlock(CodeBlock.of("try { $T.forName($S); } catch ($T e) {}", Class.class, qn,
                                 Throwable.class));
 
                         //Transfer all annotations except for the current decorator and a potential @Generated annotation
                         te.getAnnotationMirrors().forEach(am -> {
                             TypeElement element = (TypeElement) am.getAnnotationType().asElement();
-                            if (!element.equals(generated) && !element.equals(myAnnotation))
+                            if (!element.equals(generated) && !element.equals(myAnnotation) && !element.equals(decorated))
                                 b.addAnnotation(AnnotationSpec.get(am));
                         });
 
@@ -575,12 +576,12 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                         constructors.forEach(ee -> {
                             List<String> args = ee.getParameters()
                                     .stream()
-                                    .map(p -> escapeQnForCodeBlock(toClass(p).getCanonicalName()) + ".class")
+                                    .map(p -> toClass(p).getCanonicalName() + ".class")
                                     .collect(Collectors.toList());
                             List<String> argStringTemp = new ArrayList<>();
                             for (int i = 0; i < ee.getParameters().size(); i++) {
                                 argStringTemp.add("("
-                                        + escapeQnForCodeBlock(toClass(ee.getParameters().get(i)).getCanonicalName())
+                                        + toClass(ee.getParameters().get(i)).getCanonicalName()
                                         + ") args[" + i + "]");
                             }
                             String argStr = String.join(", ", argStringTemp);
@@ -591,9 +592,9 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                             MethodBinding.class,
                                             "<init>",
                                             java.lang.reflect.Modifier.PUBLIC,
-                                            escapeQnForCodeBlock(newQn),
+                                            newQn,
                                             String.join(", ", args),
-                                            escapeQnForCodeBlock(newQn),
+                                            newQn,
                                             argStr));
                         });
                         b.addStaticBlock(CodeBlock.join(constructorBindings, "\n"));
