@@ -335,11 +335,6 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                 .initializer(CodeBlock.of("$L.class;", originalClass))
                                 .build());
 
-                        b.addField(FieldSpec.builder(TypeName.get(AnnotationDefinition.class), "__DECORATOR_INST__",
-                                Modifier.FINAL, Modifier.STATIC, Modifier.PRIVATE)
-                                .initializer(CodeBlock.of("$L;", new AnnotationDefinition(te.getAnnotation(annotation())).builderCode()))
-                                .build());
-
                         //Force static init of superclass
                         b.addStaticBlock(CodeBlock.of("try { $T.forName($S); } catch ($T e) {}", Class.class, qn,
                                 Throwable.class));
@@ -351,22 +346,58 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                 b.addAnnotation(AnnotationSpec.get(am));
                         });
 
+                        List<ExecutableElement> methodAnnotationIndexTmp = new ArrayList<>();
+                        if (isClassDecorator) {
+                            b.addField(FieldSpec.builder(TypeName.get(AnnotationDefinition.class), "__DECORATOR_INST__",
+                                    Modifier.FINAL, Modifier.STATIC, Modifier.PRIVATE)
+                                    .initializer(CodeBlock.of("$L;", new AnnotationDefinition(te.getAnnotation(annotation())).builderCode()))
+                                    .build());
+                        } else {
+                            List<CodeBlock> arrayInitializers = new ArrayList<>();
+
+                            roundEnv.getElementsAnnotatedWith(annotation())
+                                    .stream()
+                                    .filter(it -> it.getEnclosingElement().equals(te))
+                                    .map(ExecutableElement.class::cast)
+                                    .peek(ee -> {
+                                        arrayInitializers.add(CodeBlock.of("$L", new AnnotationDefinition(te.getAnnotation(annotation())).builderCode()));
+                                    })
+                                    .forEach(methodAnnotationIndexTmp::add);
+
+                            b.addField(FieldSpec.builder(TypeName.get(AnnotationDefinition[].class), "__DECORATOR_INST__",
+                                    Modifier.FINAL, Modifier.STATIC, Modifier.PRIVATE)
+                                    .initializer(CodeBlock.join(Arrays.asList(CodeBlock.of("new $T[]{", TypeName.get(AnnotationDefinition[].class)),
+                                            CodeBlock.join(arrayInitializers, ", "),
+                                            CodeBlock.of("};")), ""))
+                                    .build());
+                        }
+
                         //Collect things to be decorated
+                        Map<MethodDefinition, ExecutableElement> md2ee = new HashMap<>();
 
                         //First we need to collect ALL elements
-                        List<ExecutableElement> constructors = te.getEnclosedElements()
-                                .stream()
-                                .filter(ee -> ee instanceof ExecutableElement)
-                                .map(ExecutableElement.class::cast)
-                                .filter(ee -> ee.getKind() == ElementKind.CONSTRUCTOR)
-                                .collect(Collectors.toList());
+                        List<ExecutableElement> constructors;
+                        if (isClassDecorator)
+                            constructors = te.getEnclosedElements()
+                                    .stream()
+                                    .filter(ee -> ee instanceof ExecutableElement)
+                                    .map(ExecutableElement.class::cast)
+                                    .filter(ee -> ee.getKind() == ElementKind.CONSTRUCTOR)
+                                    .collect(Collectors.toList());
+                        else
+                            constructors = new ArrayList<>();
 
-                        List<ExecutableElement> methods = te.getEnclosedElements()
-                                .stream()
-                                .filter(ee -> ee instanceof ExecutableElement)
-                                .map(ExecutableElement.class::cast)
-                                .filter(ee -> ee.getKind() != ElementKind.CONSTRUCTOR)
-                                .collect(Collectors.toList());
+                        List<ExecutableElement> methods;
+                        if (isClassDecorator)
+                            methods = te.getEnclosedElements()
+                                    .stream()
+                                    .filter(ee -> ee instanceof ExecutableElement)
+                                    .map(ExecutableElement.class::cast)
+                                    .filter(ee -> ee.getKind() != ElementKind.CONSTRUCTOR)
+                                    .collect(Collectors.toList());
+                        else {
+                            methods = methodAnnotationIndexTmp;
+                        }
 
                         List<VariableElement> fields = te.getEnclosedElements()
                                 .stream()
@@ -389,7 +420,12 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                         Set<MethodDefinition> staticMethodDefs = new HashSet<>();
                         methods.stream()
                                 .filter(ee -> ee.getModifiers().contains(Modifier.STATIC))
-                                .forEach(ee -> staticMethodDefs.add(executableElementToMethodDef(ee)));
+                                .map(ee -> {
+                                    MethodDefinition md = executableElementToMethodDef(ee);
+                                    md2ee.put(md, ee);
+                                    return md;
+                                })
+                                .forEach(staticMethodDefs::add);
 
                         Arrays.stream(methods())
                                 .filter(MethodDefinition::isStatic)
@@ -399,7 +435,12 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                         Set<MethodDefinition> instanceMethodDefs = new HashSet<>();
                         methods.stream()
                                 .filter(ee -> !ee.getModifiers().contains(Modifier.STATIC))
-                                .forEach(ee -> instanceMethodDefs.add(executableElementToMethodDef(ee)));
+                                .map(ee -> {
+                                    MethodDefinition md = executableElementToMethodDef(ee);
+                                    md2ee.put(md, ee);
+                                    return md;
+                                })
+                                .forEach(instanceMethodDefs::add);
 
                         interfaceMethods.forEach(m -> instanceMethodDefs.add(MethodDefinition.from(m)));
 
@@ -582,7 +623,8 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                 .addCode(CodeBlock.join(instanceMethodBindings, "\n"))
                                 .build());
 
-                        b.addStaticBlock(CodeBlock.of("__DRIVER__.runtimeInit(__DECORATOR_INST__, __ORIGINAL_CLASS__, __STATIC_FIELD_PROXY__);"));
+                        String optionalFirstParam = isClassDecorator ? "__DECORATOR_INST__, " : "";
+                        b.addStaticBlock(CodeBlock.of("__DRIVER__.runtimeInit(" + optionalFirstParam + "__ORIGINAL_CLASS__, __STATIC_FIELD_PROXY__);"));
 
                         constructors.forEach(con -> {
                             MethodSpec.Builder builder = MethodSpec.constructorBuilder()
@@ -651,9 +693,10 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                         isStatic ? "STATIC" : "INSTANCE");
                                 String temp = md.getReturnType().equals(void.class) ? "" : "return (" + md.getReturnType().getCanonicalName() + ") ";
 
-                                builder.addStatement(temp + "__DRIVER__.methodWrap(__DECORATOR_INST__, __ORIGINAL_CLASS__, $L.getBinding($T.from($S, new " +
-                                                "Class[]{$L})$L))",
-                                        stmt, MethodIdentifier.class, md.getName(),
+                                String optionalDecoratorIndex = isClassDecorator ? "" : "[" + methodAnnotationIndexTmp.indexOf(md2ee.get(md)) + "]";
+                                builder.addStatement(temp + "__DRIVER__.methodWrap(__DECORATOR_INST__" + optionalDecoratorIndex + ", __ORIGINAL_CLASS__, $L.getBinding($S, new " +
+                                                "Class[]{$L}$L))",
+                                        stmt, md.getName(),
                                         Arrays.stream(md.getArgTypes()).map(c -> c.getCanonicalName() + ".class")
                                                 .collect(Collectors.joining(",")),
                                         argLen == 0 ? "" : "," + IntStream.range(0, argLen).mapToObj(i -> "arg" + i)

@@ -11,7 +11,6 @@ public abstract class ClassDecoratorDriver implements DecoratorDriver {
 
     // Just hooks, to prevent breakage
 
-    @Override
     @RunTimeOnly
     public abstract void runtimeInit(AnnotationDefinition decorator, Class<?> clazz, FieldProxy proxy);
 

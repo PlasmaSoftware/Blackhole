@@ -9,9 +9,8 @@ public abstract class MethodDecoratorDriver implements DecoratorDriver {
 
     public MethodDecoratorDriver() {}
 
-    @Override
     @RunTimeOnly
-    public abstract void runtimeInit(AnnotationDefinition decorator, Class<?> clazz, FieldProxy proxy);
+    public abstract void runtimeInit(Class<?> clazz, FieldProxy proxy);
 
     // Total wrap
 

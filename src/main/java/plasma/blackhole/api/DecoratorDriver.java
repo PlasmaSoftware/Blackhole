@@ -7,9 +7,6 @@ import plasma.blackhole.util.*;
 @RequireNoArgConstructor
 interface DecoratorDriver { //Impls need to be manually hooked
 
-    @RunTimeOnly
-    void runtimeInit(AnnotationDefinition decorator, Class<?> clazz, FieldProxy proxy);
-
     // Total wrap
 
     @RunTimeOnly
