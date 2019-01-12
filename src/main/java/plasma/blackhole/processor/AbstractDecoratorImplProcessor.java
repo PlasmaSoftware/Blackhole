@@ -510,7 +510,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                     String name = v.getName();
                                     staticFieldBindings.add(
                                             CodeBlock.of(String.format("__STATIC_FIELD_PROXY__.bind($S, new $T(" +
-                                                            "$S, $L, $L, $L.class, %s, %s);",
+                                                            "$S, $L, $L, $T.class, %s, %s);",
                                                     makeGetterTemplate(v, false, qn), makeSetterTemplate(v, false, qn, name)),
                                                     name,
                                                     FieldBinding.class,
@@ -535,7 +535,7 @@ public abstract class AbstractDecoratorImplProcessor extends AbstractBlackholeAn
                                     String name = v.getName();
                                     instanceFieldBindings.add(
                                             CodeBlock.of(String.format("__INSTANCE_FIELD_PROXY__.bind($S, new $T(" +
-                                                            "$S, $L, $L, $L.class, %s, %s);",
+                                                            "$S, $L, $L, $T.class, %s, %s);",
                                                     makeGetterTemplate(v, true, qn), makeSetterTemplate(v, true, qn, name)),
                                                     name,
                                                     FieldBinding.class,
