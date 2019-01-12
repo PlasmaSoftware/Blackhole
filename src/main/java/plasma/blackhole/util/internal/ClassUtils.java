@@ -1,5 +1,6 @@
 package plasma.blackhole.util.internal;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 
@@ -58,6 +59,9 @@ public final class ClassUtils {
 
     public static Class<?> stringToClass(String s) {
         try {
+            if (s.endsWith("[]")) {
+                return Array.newInstance(stringToClass(s.substring(0, s.length()-2)), 0).getClass();
+            }
             return Class.forName(s);
         } catch (Exception e) {
             switch (s) {
